@@ -102,7 +102,8 @@ uses
   NtUiLib.HysteresisList in 'NtUtils\NtUiLib\NtUiLib.HysteresisList.pas',
   NtUiLib.Icons in 'NtUtils\NtUiLib\NtUiLib.Icons.pas',
   VclEx.ListView in 'VclEx\VclEx.ListView.pas',
-  MainForm in 'MainForm.pas' {FormMain};
+  MainForm in 'MainForm.pas' {FormMain},
+  TransactionInfo in 'TransactionInfo.pas' {FormInfo};
 
 {$R *.res}
 

@@ -41,7 +41,7 @@ implementation
 
 uses
   Ntapi.nttmapi, NtUiLib.Exceptions, NtUtils.Transactions, NtUtils.Objects,
-  Ntapi.ntobapi;
+  Ntapi.ntobapi, TransactionInfo;
 
 {$R *.dfm}
 
@@ -66,7 +66,7 @@ begin
     Description) then
   begin
     NtxCreateTransaction(hxTransaction, Description).RaiseOnError;
-    // TODO: show transaction info dialog
+    TFormInfo.CreateDlg(Self, hxTransaction);
     ForceTimer;
   end;
 end;
@@ -126,7 +126,7 @@ begin
   NtxOpenTransactionById(hxTransaction, ActiveTransctions[
     lvActiveTmTx.Selected.Index].Data, MAXIMUM_ALLOWED).RaiseOnError;
 
-  // TODO: show transaction info dialog
+  TFormInfo.CreateDlg(Self, hxTransaction);
 end;
 
 procedure TFormMain.OnActiveAddFinish(const Item: TGuid; Index: Integer);
