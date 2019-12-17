@@ -90,13 +90,14 @@ object FormMain: TFormMain
         Caption = 'Handle value'
         Width = 100
       end>
-    GroupView = True
+    GridLines = True
     ReadOnly = True
     RowSelect = True
     ParentShowHint = False
     ShowHint = True
     TabOrder = 2
     ViewStyle = vsReport
+    OnDblClick = lvHandlesDblClick
     ColoringItems = True
   end
   object btnTransact: TButton

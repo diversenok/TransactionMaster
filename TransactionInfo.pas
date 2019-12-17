@@ -163,7 +163,6 @@ begin
       RaiseOnError;
 
     NtxCloseRemoteHandle(hxProcess.Value, Item.Data.HandleValue).RaiseOnError;
-    lvConsumers.Selected.Selected := False;
     ForceUpdate;
   end;
 end;
@@ -250,6 +249,7 @@ end;
 procedure TFormInfo.OnConsumerRemoveStart(const Item: TSystemHandleEntry;
   Index: Integer);
 begin
+  lvConsumers.Items[Index].Selected := False;
   lvConsumers.Items[Index].Color := clRed;
 end;
 
