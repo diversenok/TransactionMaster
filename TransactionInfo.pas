@@ -53,7 +53,8 @@ implementation
 uses
   NtUtils.Transactions, Ntapi.nttmapi, Ntapi.ntobapi, NtUtils.Access,
   NtUtils.Processes.Snapshots, DelphiUtils.Strings, NtUtils.Exceptions,
-  System.UITypes, NtUiLib.Icons, NtUtils.Processes, Ntapi.ntpsapi;
+  System.UITypes, NtUiLib.Icons, NtUtils.Processes, Ntapi.ntpsapi,
+  ProcessList;
 
 {$R *.dfm}
 
@@ -121,8 +122,16 @@ begin
 end;
 
 procedure TFormInfo.btnSendHandleClick(Sender: TObject);
+var
+  hxProcess: IHandle;
+  hNewHandle: THandle;
 begin
-  // TODO: pick a process and send a handle
+  NtxOpenProcess(hxProcess, TFormProcessList.Pick(Self).Process.ProcessId,
+    PROCESS_DUP_HANDLE).RaiseOnError;
+
+  NtxDuplicateObjectTo(hxProcess.Value, hxTranscation.Value,
+    hNewHandle).RaiseOnError;
+
   ForceUpdate;
 end;
 

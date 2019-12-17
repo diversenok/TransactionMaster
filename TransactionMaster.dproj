@@ -237,6 +237,10 @@
             <Form>FormInfo</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="ProcessList.pas">
+            <Form>FormProcessList</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <RcCompile Include="NtUtils\NtUtils.ErrorMsg.rc">
             <Form>NtUtils.ErrorMsg.res</Form>
         </RcCompile>
