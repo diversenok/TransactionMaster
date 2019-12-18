@@ -29,6 +29,7 @@ type
     ActiveTransctions: THysteresisList<TGuid>;
     Consumers: THysteresisList<TSystemHandleEntry>;
     TmTxTypeIndex: NativeUInt;
+    IsFirstUpdate: Boolean;
     procedure ForceTimer;
     procedure FillTransactionInfo(const Item: TGuid; Index: Integer);
     procedure AddMissingProcessIcons;
@@ -184,6 +185,7 @@ begin
   if TmTxTypeIndex = 0 then
     TmTxTypeIndex := 39;
 
+  IsFirstUpdate := True;
   UpdateTimerTimer(Sender);
 end;
 
@@ -218,8 +220,10 @@ begin
   with lvActiveTmTx.Items.Add do
   begin
     Caption := Item.ToString;
-    Color := clLime;
     FillTransactionInfo(Item, Index);
+
+    if not IsFirstUpdate then
+      Color := clLime;
   end;
 end;
 
@@ -248,7 +252,9 @@ begin
     Cell[1] := IntToStr(Item.UniqueProcessId);
     Cell[2] := IntToHexEx(Item.HandleValue);
     Cell[3] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
-    Color := clLime;
+
+    if not IsFirstUpdate then
+      Color := clLime;
   end;
 end;
 
@@ -307,6 +313,8 @@ begin
       AddMissingProcessIcons;
   end;
   lvHandles.Items.EndUpdate;
+
+  IsFirstUpdate := False;
 end;
 
 end.

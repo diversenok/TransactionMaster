@@ -84,11 +84,15 @@ object FormMain: TFormMain
       end
       item
         Caption = 'PID'
-        Width = 150
+        Width = 70
       end
       item
-        Caption = 'Handle value'
-        Width = 100
+        Caption = 'Handle'
+        Width = 70
+      end
+      item
+        Caption = 'Access mask'
+        Width = 150
       end>
     GridLines = True
     ReadOnly = True

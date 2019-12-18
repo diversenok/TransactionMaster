@@ -36,6 +36,7 @@ type
   private
     hxTranscation: IHandle;
     Consumers: THysteresisList<TSystemHandleEntry>;
+    IsFirstUpdate: Boolean;
     procedure UpdateProperties;
     procedure UpdateBasicInfo;
     procedure AddMissingProcessIcons;
@@ -211,6 +212,7 @@ begin
   end;
   lvInfo.Items.EndUpdate;
 
+  IsFirstUpdate := True;
   UpdateTimerTimer(Sender);
 end;
 
@@ -236,7 +238,9 @@ begin
     Cell[1] := IntToStr(Item.UniqueProcessId);
     Cell[2] := IntToHexEx(Item.HandleValue);
     Cell[3] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
-    Color := clLime;
+
+    if not IsFirstUpdate then
+      Color := clLime;
   end;
 end;
 
