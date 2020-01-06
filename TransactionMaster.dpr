@@ -102,10 +102,10 @@ uses
   NtUiLib.HysteresisList in 'NtUtils\NtUiLib\NtUiLib.HysteresisList.pas',
   NtUiLib.Icons in 'NtUtils\NtUiLib\NtUiLib.Icons.pas',
   VclEx.ListView in 'VclEx\VclEx.ListView.pas',
-  MainForm in 'MainForm.pas' {FormMain},
-  TransactionInfo in 'TransactionInfo.pas' {FormTmTxInfo},
-  ProcessList in 'ProcessList.pas' {FormProcessList},
-  ProcessInfo in 'ProcessInfo.pas' {FormProcessInfo};
+  MainForm in 'UI\MainForm.pas' {FormMain},
+  TransactionInfo in 'UI\TransactionInfo.pas' {FormTmTxInfo},
+  ProcessList in 'UI\ProcessList.pas' {FormProcessList},
+  ProcessInfo in 'UI\ProcessInfo.pas' {FormProcessInfo};
 
 {$R *.res}
 

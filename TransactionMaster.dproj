@@ -229,19 +229,19 @@
         <DCCReference Include="NtUtils\NtUiLib\NtUiLib.HysteresisList.pas"/>
         <DCCReference Include="NtUtils\NtUiLib\NtUiLib.Icons.pas"/>
         <DCCReference Include="VclEx\VclEx.ListView.pas"/>
-        <DCCReference Include="MainForm.pas">
+        <DCCReference Include="UI\MainForm.pas">
             <Form>FormMain</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="TransactionInfo.pas">
+        <DCCReference Include="UI\TransactionInfo.pas">
             <Form>FormTmTxInfo</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="ProcessList.pas">
+        <DCCReference Include="UI\ProcessList.pas">
             <Form>FormProcessList</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="ProcessInfo.pas">
+        <DCCReference Include="UI\ProcessInfo.pas">
             <Form>FormProcessInfo</Form>
             <FormType>dfm</FormType>
         </DCCReference>
