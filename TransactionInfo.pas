@@ -45,7 +45,7 @@ type
     procedure AtHandleSnapshot(const Handles: TArray<TSystemHandleEntry>);
     procedure AtShutdown(const Sender: TObject);
   public
-    constructor CreateDlg(AOwner: TComponent; Transcation: IHandle);
+    constructor CreateDlg(Transcation: IHandle);
   end;
 
 implementation
@@ -54,7 +54,7 @@ uses
   NtUtils.Transactions, Ntapi.nttmapi, Ntapi.ntobapi, NtUtils.Access,
   NtUtils.Processes.Snapshots, DelphiUtils.Strings, NtUtils.Exceptions,
   System.UITypes, NtUiLib.Icons, NtUtils.Processes, Ntapi.ntpsapi,
-  ProcessList, MainForm;
+  ProcessList, MainForm, ProcessInfo;
 
 {$R *.dfm}
 
@@ -62,12 +62,6 @@ const
   COMMIT_ROLLBACK_WARNING = 'Commiting or rolling back a transaction ' +
     'invalidates all file handles opened for this transaction. Programs that' +
     'use this transaction might misbehave. Continue anyway?';
-
-function CompareHandleEntries(const A, B: TSystemHandleEntry): Boolean;
-begin
-  Result := (A.UniqueProcessId = B.UniqueProcessId) and
-    (A.HandleValue = B.HandleValue) and (A.GrantedAccess = B.GrantedAccess);
-end;
 
 procedure TFormTmTxInfo.AddMissingProcessIcons;
 var
@@ -234,10 +228,10 @@ begin
   end;
 end;
 
-constructor TFormTmTxInfo.CreateDlg(AOwner: TComponent; Transcation: IHandle);
+constructor TFormTmTxInfo.CreateDlg(Transcation: IHandle);
 begin
   hxTranscation := Transcation;
-  inherited Create(AOwner);
+  inherited Create(FormMain);
   Show;
 end;
 
@@ -288,7 +282,8 @@ begin
   if not Assigned(lvConsumers.Selected) then
     Exit;
 
-  // TODO: show process information dialog
+  TFormProcessInfo.CreateDlg(Consumers[lvConsumers.Selected.Index].Data
+    .UniqueProcessId);
 end;
 
 procedure TFormTmTxInfo.UpdateBasicInfo;

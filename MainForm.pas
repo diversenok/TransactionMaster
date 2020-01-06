@@ -6,7 +6,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons, Vcl.Graphics,
   NtUtils.Exceptions, Vcl.ComCtrls, VclEx.ListView, Vcl.AppEvnts, Vcl.ExtCtrls,
-  NtUiLib.HysteresisList, NtUtils.Objects.Snapshots, DelphiUtils.Events;
+  NtUiLib.HysteresisList, NtUtils.Objects.Snapshots, DelphiUtils.Events,
+  NtUtils.Processes.Snapshots;
 
 type
   TFormMain = class(TForm)
@@ -32,6 +33,7 @@ type
     IsFirstUpdate: Boolean;
     FOnHandleSnapshotting: TEvent<TArray<TSystemHandleEntry>>;
     FOnTmTxEnumeration: TEvent<TArray<TGuid>>;
+    FOnProcessSnapshotting: TEvent<TArray<TProcessEntry>>;
     FOnShutdown: TEvent<TObject>;
     procedure FillTransactionInfo(const Item: TGuid; Index: Integer);
     procedure AddMissingProcessIcons;
@@ -49,19 +51,22 @@ type
     procedure ForceTimerUpdate;
     property OnHandleSnapshotting: TEvent<TArray<TSystemHandleEntry>> read FOnHandleSnapshotting;
     property OnTmTxEnumeration: TEvent<TArray<TGuid>> read FOnTmTxEnumeration;
+    property OnProcessSnapshotting: TEvent<TArray<TProcessEntry>> read FOnProcessSnapshotting;
     property OnShutdown: TEvent<TObject> read FOnShutdown;
   end;
 
 var
   FormMain: TFormMain;
 
+function CompareHandleEntries(const A, B: TSystemHandleEntry): Boolean;
+
 implementation
 
 uses
   Ntapi.nttmapi, NtUiLib.Exceptions, NtUtils.Transactions, NtUtils.Objects,
   Ntapi.ntobapi, NtUtils.Access, DelphiUtils.Strings, DelphiUtils.Arrays,
-  NtUtils.Processes, NtUtils.Processes.Snapshots, NtUiLib.Icons,
-  TransactionInfo;
+  NtUtils.Processes, NtUiLib.Icons,
+  TransactionInfo, ProcessInfo;
 
 {$R *.dfm}
 
@@ -211,7 +216,7 @@ begin
     Description) then
   begin
     NtxCreateTransaction(hxTransaction, Description).RaiseOnError;
-    TFormTmTxInfo.CreateDlg(Self, hxTransaction);
+    TFormTmTxInfo.CreateDlg(hxTransaction);
   end;
 end;
 
@@ -310,7 +315,7 @@ begin
   NtxOpenTransactionById(hxTransaction, ActiveTransctions[
     lvActiveTmTx.Selected.Index].Data, MAXIMUM_ALLOWED).RaiseOnError;
 
-  TFormTmTxInfo.CreateDlg(Self, hxTransaction);
+  TFormTmTxInfo.CreateDlg(hxTransaction);
 end;
 
 procedure TFormMain.lvHandlesDblClick(Sender: TObject);
@@ -318,35 +323,58 @@ begin
   if not Assigned(lvHandles.Selected) then
     Exit;
 
-  // TODO: show process information dialog
+  TFormProcessInfo.CreateDlg(Consumers[lvHandles.Selected.Index].Data.
+    UniqueProcessId);
 end;
 
 procedure TFormMain.timerUpdateTick(Sender: TObject);
 var
   Guids: TArray<TGuid>;
   Handles: TArray<TSystemHandleEntry>;
+  Processes: TArray<TProcessEntry>;
 begin
   if WindowState = wsMinimized then
     Exit;
 
-  // Snapshot active transactions
-  if not NtxEnumerateTransactions(Guids).IsSuccess then
-    SetLength(Guids, 0);
+  try
+    // Snapshot active transactions
+    if OnTmTxEnumeration.Count > 0 then
+    begin
+      if not NtxEnumerateTransactions(Guids).IsSuccess then
+        SetLength(Guids, 0);
 
-  // Invoke update
-  OnTmTxEnumeration.Invoke(Guids);
+      OnTmTxEnumeration.Invoke(Guids);
+    end;
 
-  // Snapshot system handles, filter transactions only
-  if NtxEnumerateHandles(Handles).IsSuccess then
-    TArrayHelper.Filter<TSystemHandleEntry>(Handles, FilterByType,
-      TmTxTypeIndex)
-  else
-    SetLength(Handles, 0);
+    // Snapshot system handles
+    if OnHandleSnapshotting.Count > 0 then
+    begin
+      if not NtxEnumerateHandles(Handles).IsSuccess then
+        SetLength(Handles, 0);
 
-  // Invoke update
-  OnHandleSnapshotting.Invoke(Handles);
+      // Filter transactions only
+      TArrayHelper.Filter<TSystemHandleEntry>(Handles, FilterByType,
+        TmTxTypeIndex);
 
-  IsFirstUpdate := False;
+      OnHandleSnapshotting.Invoke(Handles);
+    end;
+
+    // Snapshot processes
+    if OnProcessSnapshotting.Count > 0 then
+    begin
+      if not NtxEnumerateProcesses(Processes).IsSuccess then
+        SetLength(Processes, 0);
+
+      OnProcessSnapshotting.Invoke(Processes);
+    end;
+
+    IsFirstUpdate := False;
+  except
+    // Exceptions here mean a serious bug.
+    // At least stop spamming messages every second...
+    timerUpdate.Enabled := False;
+    raise;
+  end;
 end;
 
 end.

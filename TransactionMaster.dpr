@@ -103,8 +103,9 @@ uses
   NtUiLib.Icons in 'NtUtils\NtUiLib\NtUiLib.Icons.pas',
   VclEx.ListView in 'VclEx\VclEx.ListView.pas',
   MainForm in 'MainForm.pas' {FormMain},
-  TransactionInfo in 'TransactionInfo.pas' {FormInfo},
-  ProcessList in 'ProcessList.pas' {FormProcessList};
+  TransactionInfo in 'TransactionInfo.pas' {FormTmTxInfo},
+  ProcessList in 'ProcessList.pas' {FormProcessList},
+  ProcessInfo in 'ProcessInfo.pas' {FormProcessInfo};
 
 {$R *.res}
 

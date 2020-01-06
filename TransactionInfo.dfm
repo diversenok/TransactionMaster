@@ -12,6 +12,7 @@ object FormTmTxInfo: TFormTmTxInfo
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  Position = poOwnerFormCenter
   ShowHint = True
   OnClose = FormClose
   OnCreate = FormCreate
