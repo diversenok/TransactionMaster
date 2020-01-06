@@ -6,41 +6,50 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons, Vcl.Graphics,
   NtUtils.Exceptions, Vcl.ComCtrls, VclEx.ListView, Vcl.AppEvnts, Vcl.ExtCtrls,
-  NtUiLib.HysteresisList, NtUtils.Objects.Snapshots;
+  NtUiLib.HysteresisList, NtUtils.Objects.Snapshots, DelphiUtils.Events;
 
 type
   TFormMain = class(TForm)
-    lvActiveTmTx: TListViewEx;
-    lblActive: TLabel;
+    appEvents: TApplicationEvents;
     btnNewTmTx: TButton;
-    lvHandles: TListViewEx;
-    lblProcesses: TLabel;
-    ApplicationEvents: TApplicationEvents;
     btnTransact: TButton;
-    UpdateTimer: TTimer;
+    lblActive: TLabel;
+    lblProcesses: TLabel;
+    lvActiveTmTx: TListViewEx;
+    lvHandles: TListViewEx;
+    timerUpdate: TTimer;
     procedure FormCreate(Sender: TObject);
-    procedure btnNewTmTxClick(Sender: TObject);
-    procedure ApplicationEventsException(Sender: TObject; E: Exception);
-    procedure lvActiveTmTxDblClick(Sender: TObject);
-    procedure UpdateTimerTimer(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure appEventsException(Sender: TObject; E: Exception);
+    procedure btnNewTmTxClick(Sender: TObject);
+    procedure lvActiveTmTxDblClick(Sender: TObject);
     procedure lvHandlesDblClick(Sender: TObject);
+    procedure timerUpdateTick(Sender: TObject);
   private
     ActiveTransctions: THysteresisList<TGuid>;
     Consumers: THysteresisList<TSystemHandleEntry>;
     TmTxTypeIndex: NativeUInt;
     IsFirstUpdate: Boolean;
-    procedure ForceTimer;
+    FOnHandleSnapshotting: TEvent<TArray<TSystemHandleEntry>>;
+    FOnTmTxEnumeration: TEvent<TArray<TGuid>>;
+    FOnShutdown: TEvent<TObject>;
     procedure FillTransactionInfo(const Item: TGuid; Index: Integer);
     procedure AddMissingProcessIcons;
-    procedure OnActiveAddStart(const Item: TGuid; Index: Integer);
-    procedure OnActiveAddFinish(const Item: TGuid; Index: Integer);
-    procedure OnActiveRemoveStart(const Item: TGuid; Index: Integer);
-    procedure OnActiveRemoveFinish(const Item: TGuid; Index: Integer);
-    procedure OnConsumerAddStart(const Item: TSystemHandleEntry; Index: Integer);
-    procedure OnConsumerAddFinish(const Item: TSystemHandleEntry; Index: Integer);
-    procedure OnConsumerRemoveStart(const Item: TSystemHandleEntry; Index: Integer);
-    procedure OnConsumerRemoveFinish(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtActiveAddStart(const Item: TGuid; Index: Integer);
+    procedure AtActiveAddFinish(const Item: TGuid; Index: Integer);
+    procedure AtActiveRemoveStart(const Item: TGuid; Index: Integer);
+    procedure AtActiveRemoveFinish(const Item: TGuid; Index: Integer);
+    procedure AtConsumerAddStart(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtConsumerAddFinish(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtConsumerRemoveStart(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtConsumerRemoveFinish(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtTmTxEnumeration(const Transactions: TArray<TGuid>);
+    procedure AtHandleSnapshot(const Handles: TArray<TSystemHandleEntry>);
+  public
+    procedure ForceTimerUpdate;
+    property OnHandleSnapshotting: TEvent<TArray<TSystemHandleEntry>> read FOnHandleSnapshotting;
+    property OnTmTxEnumeration: TEvent<TArray<TGuid>> read FOnTmTxEnumeration;
+    property OnShutdown: TEvent<TObject> read FOnShutdown;
   end;
 
 var
@@ -94,9 +103,101 @@ begin
     end;
 end;
 
-procedure TFormMain.ApplicationEventsException(Sender: TObject; E: Exception);
+procedure TFormMain.appEventsException(Sender: TObject; E: Exception);
 begin
   ShowNtxException(Self.Handle, E);
+end;
+
+procedure TFormMain.AtActiveAddFinish(const Item: TGuid; Index: Integer);
+begin
+  lvActiveTmTx.Items[Index].ColorEnabled := False;
+end;
+
+procedure TFormMain.AtActiveAddStart(const Item: TGuid; Index: Integer);
+begin
+  with lvActiveTmTx.Items.Add do
+  begin
+    Caption := Item.ToString;
+    FillTransactionInfo(Item, Index);
+
+    if not IsFirstUpdate then
+      Color := clLime;
+  end;
+end;
+
+procedure TFormMain.AtActiveRemoveFinish(const Item: TGuid; Index: Integer);
+begin
+  lvActiveTmTx.Items.Delete(Index);
+end;
+
+procedure TFormMain.AtActiveRemoveStart(const Item: TGuid; Index: Integer);
+begin
+  lvActiveTmTx.Items[Index].Selected := False;
+  lvActiveTmTx.Items[Index].Color := clRed;
+end;
+
+procedure TFormMain.AtConsumerAddFinish(const Item: TSystemHandleEntry;
+  Index: Integer);
+begin
+  lvHandles.Items[Index].ColorEnabled := False;
+end;
+
+procedure TFormMain.AtConsumerAddStart(const Item: TSystemHandleEntry;
+  Index: Integer);
+begin
+  with lvHandles.Items.Add do
+  begin
+    Cell[1] := IntToStr(Item.UniqueProcessId);
+    Cell[2] := IntToHexEx(Item.HandleValue);
+    Cell[3] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
+
+    if not IsFirstUpdate then
+      Color := clLime;
+  end;
+end;
+
+procedure TFormMain.AtConsumerRemoveFinish(const Item: TSystemHandleEntry;
+  Index: Integer);
+begin
+  lvHandles.Items.Delete(Index);
+end;
+
+procedure TFormMain.AtConsumerRemoveStart(const Item: TSystemHandleEntry;
+  Index: Integer);
+begin
+  lvHandles.Items[Index].Selected := False;
+  lvHandles.Items[Index].Color := clRed;
+end;
+
+procedure TFormMain.AtHandleSnapshot(const Handles: TArray<TSystemHandleEntry>);
+begin
+  lvHandles.Items.BeginUpdate;
+  begin
+    // Process the snapshot
+    Consumers.Update(Handles);
+
+    // If new items arrived, update their process names and icons
+    if Consumers.AddStartDelta > 0 then
+      AddMissingProcessIcons;
+  end;
+  lvHandles.Items.EndUpdate;
+end;
+
+procedure TFormMain.AtTmTxEnumeration(const Transactions: TArray<TGuid>);
+var
+  i: Integer;
+begin
+  lvActiveTmTx.Items.BeginUpdate;
+  begin
+    // Process the snapshot
+    ActiveTransctions.Update(Transactions);
+
+    // Update info in changable columns for alive items
+   for i := 0 to ActiveTransctions.Count - 1 do
+     if ActiveTransctions[i].State <> hisDeleted then
+       FillTransactionInfo(ActiveTransctions[i].Data, i);
+  end;
+  lvActiveTmTx.Items.EndUpdate;
 end;
 
 procedure TFormMain.btnNewTmTxClick(Sender: TObject);
@@ -110,8 +211,7 @@ begin
     Description) then
   begin
     NtxCreateTransaction(hxTransaction, Description).RaiseOnError;
-    TFormInfo.CreateDlg(Self, hxTransaction);
-    ForceTimer;
+    TFormTmTxInfo.CreateDlg(Self, hxTransaction);
   end;
 end;
 
@@ -138,17 +238,20 @@ begin
     end;
 end;
 
-procedure TFormMain.ForceTimer;
+procedure TFormMain.ForceTimerUpdate;
 begin
-  UpdateTimer.Enabled := False;
-  UpdateTimerTimer(Self);
-  UpdateTimer.Enabled := True;
+  timerUpdate.Enabled := False;
+  timerUpdateTick(Self);
+  timerUpdate.Enabled := True;
 end;
 
 procedure TFormMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
+  OnHandleSnapshotting.Unsubscribe(AtHandleSnapshot);
+  OnTmTxEnumeration.Unsubscribe(AtTmTxEnumeration);
   ActiveTransctions.Free;
   Consumers.Free;
+  FOnShutdown.Invoke(Self);
 end;
 
 procedure TFormMain.FormCreate(Sender: TObject);
@@ -156,21 +259,6 @@ var
   ObjTypes: TArray<TObjectTypeInfo>;
   i: Integer;
 begin
-  ActiveTransctions := THysteresisList<TGuid>.Create(CompareGuids, 3);
-  ActiveTransctions.OnAddStart := OnActiveAddStart;
-  ActiveTransctions.OnAddFinish := OnActiveAddFinish;
-  ActiveTransctions.OnRemoveStart := OnActiveRemoveStart;
-  ActiveTransctions.OnRemoveFinish := OnActiveRemoveFinish;
-
-  Consumers := THysteresisList<TSystemHandleEntry>.Create(CompareHandleEntries,
-    3);
-  Consumers.OnAddStart := OnConsumerAddStart;
-  Consumers.OnAddFinish := OnConsumerAddFinish;
-  Consumers.OnRemoveStart := OnConsumerRemoveStart;
-  Consumers.OnRemoveFinish := OnConsumerRemoveFinish;
-
-  lvHandles.SmallImages := TProcessIcons.ImageList;
-
   // Try to obtain an index of a transaction type
   if NtxEnumerateTypes(ObjTypes).IsSuccess then
     for i := 0 to High(ObjTypes) do
@@ -185,8 +273,31 @@ begin
   if TmTxTypeIndex = 0 then
     TmTxTypeIndex := 39;
 
+  // Bind process icons
+  lvHandles.SmallImages := TProcessIcons.ImageList;
+
+  // Subscibe for active transactions change
+  ActiveTransctions := THysteresisList<TGuid>.Create(CompareGuids, 3);
+  ActiveTransctions.OnAddStart := AtActiveAddStart;
+  ActiveTransctions.OnAddFinish := AtActiveAddFinish;
+  ActiveTransctions.OnRemoveStart := AtActiveRemoveStart;
+  ActiveTransctions.OnRemoveFinish := AtActiveRemoveFinish;
+
+  // Subscribe for transaction consumers change
+  Consumers := THysteresisList<TSystemHandleEntry>.Create(CompareHandleEntries,
+    3);
+  Consumers.OnAddStart := AtConsumerAddStart;
+  Consumers.OnAddFinish := AtConsumerAddFinish;
+  Consumers.OnRemoveStart := AtConsumerRemoveStart;
+  Consumers.OnRemoveFinish := AtConsumerRemoveFinish;
+
+  // Subscribe for snapshots
+  OnTmTxEnumeration.Subscribe(AtTmTxEnumeration);
+  OnHandleSnapshotting.Subscribe(AtHandleSnapshot);
+
+  // Force the first timer tick
   IsFirstUpdate := True;
-  UpdateTimerTimer(Sender);
+  timerUpdateTick(Sender);
 end;
 
 procedure TFormMain.lvActiveTmTxDblClick(Sender: TObject);
@@ -199,7 +310,7 @@ begin
   NtxOpenTransactionById(hxTransaction, ActiveTransctions[
     lvActiveTmTx.Selected.Index].Data, MAXIMUM_ALLOWED).RaiseOnError;
 
-  TFormInfo.CreateDlg(Self, hxTransaction);
+  TFormTmTxInfo.CreateDlg(Self, hxTransaction);
 end;
 
 procedure TFormMain.lvHandlesDblClick(Sender: TObject);
@@ -210,72 +321,10 @@ begin
   // TODO: show process information dialog
 end;
 
-procedure TFormMain.OnActiveAddFinish(const Item: TGuid; Index: Integer);
-begin
-  lvActiveTmTx.Items[Index].ColorEnabled := False;
-end;
-
-procedure TFormMain.OnActiveAddStart(const Item: TGuid; Index: Integer);
-begin
-  with lvActiveTmTx.Items.Add do
-  begin
-    Caption := Item.ToString;
-    FillTransactionInfo(Item, Index);
-
-    if not IsFirstUpdate then
-      Color := clLime;
-  end;
-end;
-
-procedure TFormMain.OnActiveRemoveFinish(const Item: TGuid; Index: Integer);
-begin
-  lvActiveTmTx.Items.Delete(Index);
-end;
-
-procedure TFormMain.OnActiveRemoveStart(const Item: TGuid; Index: Integer);
-begin
-  lvActiveTmTx.Items[Index].Selected := False;
-  lvActiveTmTx.Items[Index].Color := clRed;
-end;
-
-procedure TFormMain.OnConsumerAddFinish(const Item: TSystemHandleEntry;
-  Index: Integer);
-begin
-  lvHandles.Items[Index].ColorEnabled := False;
-end;
-
-procedure TFormMain.OnConsumerAddStart(const Item: TSystemHandleEntry;
-  Index: Integer);
-begin
-  with lvHandles.Items.Add do
-  begin
-    Cell[1] := IntToStr(Item.UniqueProcessId);
-    Cell[2] := IntToHexEx(Item.HandleValue);
-    Cell[3] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
-
-    if not IsFirstUpdate then
-      Color := clLime;
-  end;
-end;
-
-procedure TFormMain.OnConsumerRemoveFinish(const Item: TSystemHandleEntry;
-  Index: Integer);
-begin
-  lvHandles.Items.Delete(Index);
-end;
-
-procedure TFormMain.OnConsumerRemoveStart(const Item: TSystemHandleEntry;
-  Index: Integer);
-begin
-  lvHandles.Items[Index].Selected := False;
-  lvHandles.Items[Index].Color := clRed;
-end;
-
-procedure TFormMain.UpdateTimerTimer(Sender: TObject);
+procedure TFormMain.timerUpdateTick(Sender: TObject);
 var
   Guids: TArray<TGuid>;
   Handles: TArray<TSystemHandleEntry>;
-  i: Integer;
 begin
   if WindowState = wsMinimized then
     Exit;
@@ -284,17 +333,8 @@ begin
   if not NtxEnumerateTransactions(Guids).IsSuccess then
     SetLength(Guids, 0);
 
-  lvActiveTmTx.Items.BeginUpdate;
-  begin
-    // Process the snapshot
-    ActiveTransctions.Update(Guids);
-
-    // Update info in changable columns for alive items
-   for i := 0 to ActiveTransctions.Count - 1 do
-     if ActiveTransctions[i].State <> hisDeleted then
-       FillTransactionInfo(ActiveTransctions[i].Data, i);
-  end;
-  lvActiveTmTx.Items.EndUpdate;
+  // Invoke update
+  OnTmTxEnumeration.Invoke(Guids);
 
   // Snapshot system handles, filter transactions only
   if NtxEnumerateHandles(Handles).IsSuccess then
@@ -303,16 +343,8 @@ begin
   else
     SetLength(Handles, 0);
 
-  lvHandles.Items.BeginUpdate;
-  begin
-    // Process the snapshot
-    Consumers.Update(Handles);
-
-    // If new items arrived, update their process names and icons
-    if Consumers.AddStartDelta > 0 then
-      AddMissingProcessIcons;
-  end;
-  lvHandles.Items.EndUpdate;
+  // Invoke update
+  OnHandleSnapshotting.Invoke(Handles);
 
   IsFirstUpdate := False;
 end;

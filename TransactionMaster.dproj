@@ -234,7 +234,7 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="TransactionInfo.pas">
-            <Form>FormInfo</Form>
+            <Form>FormTmTxInfo</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="ProcessList.pas">

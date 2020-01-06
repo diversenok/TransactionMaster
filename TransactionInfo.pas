@@ -9,30 +9,28 @@ uses
   NtUtils.Objects.Snapshots, NtUiLib.HysteresisList;
 
 type
-  TFormInfo = class(TForm)
-    lvInfo: TListViewEx;
-    PageControl: TPageControl;
-    TabGeneral: TTabSheet;
-    TabConsumers: TTabSheet;
-    lvConsumers: TListViewEx;
-    lblUsedIn: TLabel;
+  TFormTmTxInfo = class(TForm)
+    btnClose: TButton;
     btnCommit: TButton;
     btnRollback: TButton;
-    btnClose: TButton;
     btnSendHandle: TButton;
-    ProcessPopup: TPopupMenu;
     cmCloseHandle: TMenuItem;
     cmInspect: TMenuItem;
-    UpdateTimer: TTimer;
+    lblUsedIn: TLabel;
+    lvConsumers: TListViewEx;
+    lvInfo: TListViewEx;
+    pageControl: TPageControl;
+    popupProcess: TPopupMenu;
+    tabConsumers: TTabSheet;
+    tabGeneral: TTabSheet;
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure btnCloseClick(Sender: TObject);
     procedure btnCommitClick(Sender: TObject);
     procedure btnRollbackClick(Sender: TObject);
-    procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure FormCreate(Sender: TObject);
     procedure btnSendHandleClick(Sender: TObject);
     procedure cmCloseHandleClick(Sender: TObject);
     procedure lvProcessInspect(Sender: TObject);
-    procedure UpdateTimerTimer(Sender: TObject);
   private
     hxTranscation: IHandle;
     Consumers: THysteresisList<TSystemHandleEntry>;
@@ -40,11 +38,12 @@ type
     procedure UpdateProperties;
     procedure UpdateBasicInfo;
     procedure AddMissingProcessIcons;
-    procedure ForceUpdate;
-    procedure OnConsumerAddStart(const Item: TSystemHandleEntry; Index: Integer);
-    procedure OnConsumerAddFinish(const Item: TSystemHandleEntry; Index: Integer);
-    procedure OnConsumerRemoveStart(const Item: TSystemHandleEntry; Index: Integer);
-    procedure OnConsumerRemoveFinish(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtConsumerAddStart(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtConsumerAddFinish(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtConsumerRemoveStart(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtConsumerRemoveFinish(const Item: TSystemHandleEntry; Index: Integer);
+    procedure AtHandleSnapshot(const Handles: TArray<TSystemHandleEntry>);
+    procedure AtShutdown(const Sender: TObject);
   public
     constructor CreateDlg(AOwner: TComponent; Transcation: IHandle);
   end;
@@ -55,7 +54,7 @@ uses
   NtUtils.Transactions, Ntapi.nttmapi, Ntapi.ntobapi, NtUtils.Access,
   NtUtils.Processes.Snapshots, DelphiUtils.Strings, NtUtils.Exceptions,
   System.UITypes, NtUiLib.Icons, NtUtils.Processes, Ntapi.ntpsapi,
-  ProcessList;
+  ProcessList, MainForm;
 
 {$R *.dfm}
 
@@ -70,7 +69,7 @@ begin
     (A.HandleValue = B.HandleValue) and (A.GrantedAccess = B.GrantedAccess);
 end;
 
-procedure TFormInfo.AddMissingProcessIcons;
+procedure TFormTmTxInfo.AddMissingProcessIcons;
 var
   Processes: TArray<TProcessEntry>;
   FileName: String;
@@ -97,32 +96,99 @@ begin
     end;
 end;
 
-procedure TFormInfo.btnCloseClick(Sender: TObject);
+procedure TFormTmTxInfo.AtConsumerAddFinish(const Item: TSystemHandleEntry;
+  Index: Integer);
+begin
+  lvConsumers.Items[Index].ColorEnabled := False;
+end;
+
+procedure TFormTmTxInfo.AtConsumerAddStart(const Item: TSystemHandleEntry;
+  Index: Integer);
+begin
+  with lvConsumers.Items.Add do
+  begin
+    Cell[1] := IntToStr(Item.UniqueProcessId);
+    Cell[2] := IntToHexEx(Item.HandleValue);
+    Cell[3] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
+
+    if not IsFirstUpdate then
+      Color := clLime;
+  end;
+end;
+
+procedure TFormTmTxInfo.AtConsumerRemoveFinish(const Item: TSystemHandleEntry;
+  Index: Integer);
+begin
+  lvConsumers.Items.Delete(Index);
+end;
+
+procedure TFormTmTxInfo.AtConsumerRemoveStart(const Item: TSystemHandleEntry;
+  Index: Integer);
+begin
+  lvConsumers.Items[Index].Selected := False;
+  lvConsumers.Items[Index].Color := clRed;
+end;
+
+procedure TFormTmTxInfo.AtHandleSnapshot(const Handles: TArray<TSystemHandleEntry>);
+var
+  FilteredHandles: TArray<TSystemHandleEntry>;
+begin
+  // Filter on handle to our transaction
+  FilteredHandles := Copy(Handles, Low(Handles), Length(Handles));
+  NtxFilterHandlesByHandle(FilteredHandles, hxTranscation.Value);
+
+  lvConsumers.Items.BeginUpdate;
+  begin
+    // Process the snapshot
+    Consumers.Update(FilteredHandles);
+
+    // If new items arrived, update their process names and icons
+    if Consumers.AddStartDelta > 0 then
+      AddMissingProcessIcons;
+  end;
+  lvConsumers.Items.EndUpdate;
+
+  lvInfo.Items.BeginUpdate;
+  begin
+    UpdateProperties;
+    UpdateBasicInfo;
+  end;
+  lvInfo.Items.EndUpdate;
+
+  IsFirstUpdate := False;
+end;
+
+procedure TFormTmTxInfo.AtShutdown(const Sender: TObject);
 begin
   Close;
 end;
 
-procedure TFormInfo.btnCommitClick(Sender: TObject);
+procedure TFormTmTxInfo.btnCloseClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TFormTmTxInfo.btnCommitClick(Sender: TObject);
 begin
   if TaskMessageDlg('Commit the transaction?', COMMIT_ROLLBACK_WARNING,
     mtWarning, mbYesNoCancel, -1) = mrYes then
   begin
     NtxCommitTransaction(hxTranscation.Value).RaiseOnError;
-    ForceUpdate;
+    FormMain.ForceTimerUpdate;
   end;
 end;
 
-procedure TFormInfo.btnRollbackClick(Sender: TObject);
+procedure TFormTmTxInfo.btnRollbackClick(Sender: TObject);
 begin
   if TaskMessageDlg('Rollback the transaction?', COMMIT_ROLLBACK_WARNING,
     mtWarning, mbYesNoCancel, -1) = mrYes then
   begin
     NtxRollbackTransaction(hxTranscation.Value).RaiseOnError;
-    ForceUpdate;
+    FormMain.ForceTimerUpdate;
   end;
 end;
 
-procedure TFormInfo.btnSendHandleClick(Sender: TObject);
+procedure TFormTmTxInfo.btnSendHandleClick(Sender: TObject);
 var
   hxProcess: IHandle;
   hNewHandle: THandle;
@@ -133,10 +199,10 @@ begin
   NtxDuplicateObjectTo(hxProcess.Value, hxTranscation.Value,
     hNewHandle).RaiseOnError;
 
-  ForceUpdate;
+  FormMain.ForceTimerUpdate;;
 end;
 
-procedure TFormInfo.cmCloseHandleClick(Sender: TObject);
+procedure TFormTmTxInfo.cmCloseHandleClick(Sender: TObject);
 const
   CONFIRMATION_TEXT = 'Do you really want to close this handle in ';
 var
@@ -164,44 +230,45 @@ begin
       RaiseOnError;
 
     NtxCloseRemoteHandle(hxProcess.Value, Item.Data.HandleValue).RaiseOnError;
-    ForceUpdate;
+    FormMain.ForceTimerUpdate;;
   end;
 end;
 
-constructor TFormInfo.CreateDlg(AOwner: TComponent; Transcation: IHandle);
+constructor TFormTmTxInfo.CreateDlg(AOwner: TComponent; Transcation: IHandle);
 begin
   hxTranscation := Transcation;
   inherited Create(AOwner);
   Show;
 end;
 
-procedure TFormInfo.ForceUpdate;
+procedure TFormTmTxInfo.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  UpdateTimer.Enabled := False;
-  UpdateTimerTimer(Self);
-  UpdateTimer.Enabled := True;
-end;
-
-procedure TFormInfo.FormClose(Sender: TObject; var Action: TCloseAction);
-begin
-  Action := caFree;
+  FormMain.OnHandleSnapshotting.Unsubscribe(AtHandleSnapshot);
+  FormMain.OnShutdown.Unsubscribe(AtShutdown);
   Consumers.Free;
+  Action := caFree;
 end;
 
-procedure TFormInfo.FormCreate(Sender: TObject);
+procedure TFormTmTxInfo.FormCreate(Sender: TObject);
 var
   TrInfo: TTransactionBasicInformation;
 begin
-  Consumers := THysteresisList<TSystemHandleEntry>.Create(CompareHandleEntries,
-    3);
-
-  Consumers.OnAddStart := OnConsumerAddStart;
-  Consumers.OnAddFinish := OnConsumerAddFinish;
-  Consumers.OnRemoveStart := OnConsumerRemoveStart;
-  Consumers.OnRemoveFinish := OnConsumerRemoveFinish;
-
+  // Bind process icons
   lvConsumers.SmallImages := TProcessIcons.ImageList;
 
+  // Subscribe for transaction consumers change
+  Consumers := THysteresisList<TSystemHandleEntry>.Create(CompareHandleEntries,
+    3);
+  Consumers.OnAddStart := AtConsumerAddStart;
+  Consumers.OnAddFinish := AtConsumerAddFinish;
+  Consumers.OnRemoveStart := AtConsumerRemoveStart;
+  Consumers.OnRemoveFinish := AtConsumerRemoveFinish;
+
+  // Subscribe for snapshots and shutdown
+  FormMain.OnHandleSnapshotting.Subscribe(AtHandleSnapshot);
+  FormMain.OnShutdown.Subscribe(AtShutdown);
+
+  // Query static info about the transaction
   lvInfo.Items.BeginUpdate;
   begin
     if NtxTransaction.Query<TTransactionBasicInformation>(hxTranscation.Value,
@@ -213,10 +280,10 @@ begin
   lvInfo.Items.EndUpdate;
 
   IsFirstUpdate := True;
-  UpdateTimerTimer(Sender);
+  FormMain.ForceTimerUpdate;
 end;
 
-procedure TFormInfo.lvProcessInspect(Sender: TObject);
+procedure TFormTmTxInfo.lvProcessInspect(Sender: TObject);
 begin
   if not Assigned(lvConsumers.Selected) then
     Exit;
@@ -224,40 +291,7 @@ begin
   // TODO: show process information dialog
 end;
 
-procedure TFormInfo.OnConsumerAddFinish(const Item: TSystemHandleEntry;
-  Index: Integer);
-begin
-  lvConsumers.Items[Index].ColorEnabled := False;
-end;
-
-procedure TFormInfo.OnConsumerAddStart(const Item: TSystemHandleEntry;
-  Index: Integer);
-begin
-  with lvConsumers.Items.Add do
-  begin
-    Cell[1] := IntToStr(Item.UniqueProcessId);
-    Cell[2] := IntToHexEx(Item.HandleValue);
-    Cell[3] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
-
-    if not IsFirstUpdate then
-      Color := clLime;
-  end;
-end;
-
-procedure TFormInfo.OnConsumerRemoveFinish(const Item: TSystemHandleEntry;
-  Index: Integer);
-begin
-  lvConsumers.Items.Delete(Index);
-end;
-
-procedure TFormInfo.OnConsumerRemoveStart(const Item: TSystemHandleEntry;
-  Index: Integer);
-begin
-  lvConsumers.Items[Index].Selected := False;
-  lvConsumers.Items[Index].Color := clRed;
-end;
-
-procedure TFormInfo.UpdateBasicInfo;
+procedure TFormTmTxInfo.UpdateBasicInfo;
 var
   Info: TObjectBasicInformaion;
 begin
@@ -271,7 +305,7 @@ begin
   end;
 end;
 
-procedure TFormInfo.UpdateProperties;
+procedure TFormTmTxInfo.UpdateProperties;
 var
   Props: TTransactionProperties;
 begin
@@ -282,38 +316,6 @@ begin
       TypeInfo(TTransactionOutcome), Integer(Props.Outcome),
       'TransactionOutcome');
   end;
-end;
-
-procedure TFormInfo.UpdateTimerTimer(Sender: TObject);
-var
-  Handles: TArray<TSystemHandleEntry>;
-begin
-  if WindowState = wsMinimized then
-    Exit;
-
-  // Snapshot and filter system handles
-  if NtxEnumerateHandles(Handles).IsSuccess then
-    NtxFilterHandlesByHandle(Handles, hxTranscation.Value)
-  else
-    SetLength(Handles, 0);
-
-  lvConsumers.Items.BeginUpdate;
-  begin
-    // Process the snapshot
-    Consumers.Update(Handles);
-
-    // If new items arrived, update their process names and icons
-    if Consumers.AddStartDelta > 0 then
-      AddMissingProcessIcons;
-  end;
-  lvConsumers.Items.EndUpdate;
-
-  lvInfo.Items.BeginUpdate;
-  begin
-    UpdateProperties;
-    UpdateBasicInfo;
-  end;
-  lvInfo.Items.EndUpdate;
 end;
 
 end.

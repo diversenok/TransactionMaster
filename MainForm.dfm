@@ -112,13 +112,13 @@ object FormMain: TFormMain
     Caption = 'Transact a process...'
     TabOrder = 3
   end
-  object ApplicationEvents: TApplicationEvents
-    OnException = ApplicationEventsException
+  object appEvents: TApplicationEvents
+    OnException = appEventsException
     Left = 448
     Top = 136
   end
-  object UpdateTimer: TTimer
-    OnTimer = UpdateTimerTimer
+  object timerUpdate: TTimer
+    OnTimer = timerUpdateTick
     Left = 352
     Top = 128
   end

@@ -1,4 +1,4 @@
-object FormInfo: TFormInfo
+object FormTmTxInfo: TFormTmTxInfo
   Left = 0
   Top = 0
   Caption = 'Transaction info'
@@ -17,17 +17,17 @@ object FormInfo: TFormInfo
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
-  object PageControl: TPageControl
+  object pageControl: TPageControl
     AlignWithMargins = True
     Left = 3
     Top = 3
     Width = 392
     Height = 278
     Margins.Bottom = 33
-    ActivePage = TabGeneral
+    ActivePage = tabGeneral
     Align = alClient
     TabOrder = 0
-    object TabGeneral: TTabSheet
+    object tabGeneral: TTabSheet
       Caption = 'General'
       object lvInfo: TListViewEx
         AlignWithMargins = True
@@ -109,7 +109,7 @@ object FormInfo: TFormInfo
         OnClick = btnRollbackClick
       end
     end
-    object TabConsumers: TTabSheet
+    object tabConsumers: TTabSheet
       Caption = 'Consumers'
       ImageIndex = 1
       object lblUsedIn: TLabel
@@ -149,7 +149,7 @@ object FormInfo: TFormInfo
         MultiSelect = True
         ReadOnly = True
         RowSelect = True
-        PopupMenu = ProcessPopup
+        PopupMenu = popupProcess
         TabOrder = 0
         ViewStyle = vsReport
         OnDblClick = lvProcessInspect
@@ -180,7 +180,7 @@ object FormInfo: TFormInfo
     TabOrder = 1
     OnClick = btnCloseClick
   end
-  object ProcessPopup: TPopupMenu
+  object popupProcess: TPopupMenu
     Left = 231
     Top = 99
     object cmInspect: TMenuItem
@@ -194,10 +194,5 @@ object FormInfo: TFormInfo
       ShortCut = 46
       OnClick = cmCloseHandleClick
     end
-  end
-  object UpdateTimer: TTimer
-    OnTimer = UpdateTimerTimer
-    Left = 304
-    Top = 96
   end
 end
