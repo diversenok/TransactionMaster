@@ -13,20 +13,27 @@ type
   TFormProcessInfo = class(TForm)
     btnClose: TButton;
     cmAssign: TMenuItem;
+    cmAssignNone: TMenuItem;
+    cmCloseHandle: TMenuItem;
+    cmInspect: TMenuItem;
     cmResume: TMenuItem;
     cmSuspend: TMenuItem;
     lvHandles: TListViewEx;
     lvThreads: TListViewEx;
     pageControl: TPageControl;
+    popupHandle: TPopupMenu;
     popupThread: TPopupMenu;
     tabHandles: TTabSheet;
     tabThreads: TTabSheet;
-    cmAssignNone: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure btnCloseClick(Sender: TObject);
     procedure cmAssignClick(Sender: TObject);
-    procedure lvHandlesDblClick(Sender: TObject);
+    procedure cmCloseHandleClick(Sender: TObject);
+    procedure cmHandleInspect(Sender: TObject);
+    procedure cmResumeClick(Sender: TObject);
+    procedure cmSuspendClick(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
   private
     PID: NativeUInt;
     hxProcessVmRead: IHandle;
@@ -262,7 +269,7 @@ begin
   NtxOpenProcess(hxProcess, PID, PROCESS_SET_THREAD_TRANSACTION).RaiseOnError;
 
   for i := 0 to Threads.Count - 1 do
-    if lvThreads.Items[i].Selected then
+    if lvThreads.Items[i].Selected and (Threads[i].State <> hisDeleted) then
     begin
       // Open the target thread
       NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
@@ -280,6 +287,67 @@ begin
     end;
 
   FormMain.ForceTimerUpdate;
+end;
+
+procedure TFormProcessInfo.cmCloseHandleClick(Sender: TObject);
+const
+  CONFIRMATION_TEXT = 'If the program tries to use it, it might misbehave.';
+var
+  hxProcess: IHandle;
+begin
+  if Assigned(lvHandles.Selected) and (TaskMessageDlg('Close this handle?',
+    CONFIRMATION_TEXT, mtConfirmation, mbYesNoCancel, -1) = mrYes) then
+  begin
+    NtxOpenProcess(hxProcess, PID, PROCESS_DUP_HANDLE).RaiseOnError;
+
+    NtxCloseRemoteHandle(hxProcess.Value,
+      Transactions[lvHandles.Selected.Index].Data.HandleValue).RaiseOnError;
+  end;
+end;
+
+procedure TFormProcessInfo.cmHandleInspect(Sender: TObject);
+var
+  hxProcess, hxTransaction: IHandle;
+begin
+  if not Assigned(lvHandles.Selected) then
+    Exit;
+
+  // TODO: Duplicate with maximum allowed access
+  NtxOpenProcess(hxProcess, PID, PROCESS_DUP_HANDLE).RaiseOnError;
+  NtxDuplicateObjectFrom(hxProcess.Value, Transactions[lvHandles.Selected.Index]
+    .Data.HandleValue, hxTransaction).RaiseOnError;
+
+  TFormTmTxInfo.CreateDlg(hxTransaction);
+end;
+
+procedure TFormProcessInfo.cmResumeClick(Sender: TObject);
+var
+  hxThread: IHandle;
+  i: Integer;
+begin
+  for i := 0 to Threads.Count - 1 do
+    if lvThreads.Items[i].Selected and (Threads[i].State <> hisDeleted) then
+    begin
+      NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
+        THREAD_SUSPEND_RESUME).RaiseOnError;
+
+      NtxResumeThread(hxThread.Value).RaiseOnError;
+    end;
+end;
+
+procedure TFormProcessInfo.cmSuspendClick(Sender: TObject);
+var
+  hxThread: IHandle;
+  i: Integer;
+begin
+  for i := 0 to Threads.Count - 1 do
+    if lvThreads.Items[i].Selected and (Threads[i].State <> hisDeleted) then
+    begin
+      NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
+        THREAD_SUSPEND_RESUME).RaiseOnError;
+
+      NtxSuspendThread(hxThread.Value).RaiseOnError;
+    end;
 end;
 
 constructor TFormProcessInfo.CreateDlg(ProcessID: NativeUInt);
@@ -327,19 +395,10 @@ begin
   FormMain.ForceTimerUpdate;
 end;
 
-procedure TFormProcessInfo.lvHandlesDblClick(Sender: TObject);
-var
-  hxProcess, hxTransaction: IHandle;
+procedure TFormProcessInfo.FormKeyPress(Sender: TObject; var Key: Char);
 begin
-  if not Assigned(lvHandles.Selected) then
-    Exit;
-
-  // TODO: Duplicate with maximum allowed access
-  NtxOpenProcess(hxProcess, PID, PROCESS_DUP_HANDLE).RaiseOnError;
-  NtxDuplicateObjectFrom(hxProcess.Value, Transactions[lvHandles.Selected.Index]
-    .Data.HandleValue, hxTransaction).RaiseOnError;
-
-  TFormTmTxInfo.CreateDlg(hxTransaction);
+  if Ord(Key) = VK_ESCAPE then
+    Close;
 end;
 
 end.

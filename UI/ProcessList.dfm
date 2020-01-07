@@ -14,6 +14,7 @@ object FormProcessList: TFormProcessList
   Font.Style = []
   KeyPreview = True
   OldCreateOrder = False
+  Position = poOwnerFormCenter
   OnClose = FormClose
   OnCreate = FormCreate
   OnKeyDown = FormKeyDown

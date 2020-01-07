@@ -11,10 +11,12 @@ object FormProcessInfo: TFormProcessInfo
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
+  KeyPreview = True
   OldCreateOrder = False
   Position = poOwnerFormCenter
   OnClose = FormClose
   OnCreate = FormCreate
+  OnKeyPress = FormKeyPress
   PixelsPerInch = 96
   TextHeight = 13
   object pageControl: TPageControl
@@ -85,12 +87,12 @@ object FormProcessInfo: TFormProcessInfo
             Width = 160
           end>
         GridLines = True
-        MultiSelect = True
         ReadOnly = True
         RowSelect = True
+        PopupMenu = popupHandle
         TabOrder = 0
         ViewStyle = vsReport
-        OnDblClick = lvHandlesDblClick
+        OnDblClick = cmHandleInspect
         ColoringItems = True
       end
     end
@@ -119,9 +121,26 @@ object FormProcessInfo: TFormProcessInfo
     end
     object cmSuspend: TMenuItem
       Caption = '&Suspend'
+      OnClick = cmSuspendClick
     end
     object cmResume: TMenuItem
       Caption = '&Resume'
+      OnClick = cmResumeClick
+    end
+  end
+  object popupHandle: TPopupMenu
+    Left = 143
+    Top = 91
+    object cmInspect: TMenuItem
+      Caption = 'Inspect'
+      Default = True
+      ShortCut = 13
+      OnClick = cmHandleInspect
+    end
+    object cmCloseHandle: TMenuItem
+      Caption = 'Close handle'
+      ShortCut = 46
+      OnClick = cmCloseHandleClick
     end
   end
 end

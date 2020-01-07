@@ -32,6 +32,7 @@ type
     procedure btnSendHandleClick(Sender: TObject);
     procedure cmCloseHandleClick(Sender: TObject);
     procedure lvProcessInspect(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
   private
     hxTranscation: IHandle;
     Consumers: THysteresisList<TSystemHandleEntry>;
@@ -277,6 +278,12 @@ begin
 
   IsFirstUpdate := True;
   FormMain.ForceTimerUpdate;
+end;
+
+procedure TFormTmTxInfo.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Ord(Key) = VK_ESCAPE then
+    Close;
 end;
 
 procedure TFormTmTxInfo.lvProcessInspect(Sender: TObject);
