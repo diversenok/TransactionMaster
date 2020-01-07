@@ -110,9 +110,12 @@ object FormProcessInfo: TFormProcessInfo
     Left = 63
     Top = 91
     object cmAssign: TMenuItem
-      Caption = 'Assign a &transaction...'
+      Caption = 'Assign a &transaction'
       Default = True
-      ShortCut = 16468
+      object cmAssignNone: TMenuItem
+        Caption = '&No transaction'
+        OnClick = cmAssignClick
+      end
     end
     object cmSuspend: TMenuItem
       Caption = '&Suspend'

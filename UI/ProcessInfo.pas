@@ -21,13 +21,15 @@ type
     popupThread: TPopupMenu;
     tabHandles: TTabSheet;
     tabThreads: TTabSheet;
+    cmAssignNone: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure btnCloseClick(Sender: TObject);
+    procedure cmAssignClick(Sender: TObject);
     procedure lvHandlesDblClick(Sender: TObject);
   private
     PID: NativeUInt;
-    hxProcess: IHandle;
+    hxProcessVmRead: IHandle;
     hxThreads: TArray<IHandle>;
     Transactions: THysteresisList<TSystemHandleEntry>;
     Threads: THysteresisList<TSystemThreadInformation>;
@@ -91,7 +93,14 @@ begin
           Transactions[i].Data.HandleValue, hxTransaction).IsSuccess and
           NtxQueryPropertiesTransaction(hxTransaction.Value,
           Properties).IsSuccess then
-          lvHandles.Items[i].Cell[2] := Properties.Description;
+          begin
+            lvHandles.Items[i].Cell[2] := Properties.Description;
+
+            // Update caption of the sub-menu as well. Note: the first
+            // sub-menu is "No transaction", skip it
+            cmAssign.Items[i + 1].Caption := lvHandles.Items[i].Cell[0] +
+              ' (' + Properties.Description + ')';
+          end;
   end;
   lvHandles.Items.EndUpdate;
 end;
@@ -129,10 +138,10 @@ begin
      end;
 
     // Update threads' current transactions
-    if Assigned(hxProcess) then
+    if Assigned(hxProcessVmRead) then
       for i := 0 to Threads.Count - 1 do
-        if Assigned(hxThreads[i]) then
-          if RtlxGetTransactionThread(hxProcess.Value, hxThreads[i].Value,
+        if (Threads[i].State <> hisDeleted) and Assigned(hxThreads[i]) then
+          if RtlxGetTransactionThread(hxProcessVmRead.Value, hxThreads[i].Value,
             HandleValue).IsSuccess then
           begin
             if HandleValue = 0 then
@@ -200,12 +209,21 @@ end;
 
 procedure TFormProcessInfo.AtTmTxAddStart(const Item: TSystemHandleEntry;
   Index: Integer);
+var
+  Menu: TMenuItem;
 begin
   with lvHandles.Items.Add do
   begin
     Cell[0] := IntToHexEx(Item.HandleValue);
     Cell[1] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
     Cell[2] := 'Unknown';
+
+    // Add corresponging sub-menu
+    Menu := TMenuItem.Create(cmAssign);
+    Menu.Caption := Cell[0];
+    Menu.Tag := Item.HandleValue;
+    Menu.OnClick := cmAssignClick;
+    cmAssign.Add(Menu);
 
     if not IsFirstUpdate then
       Color := clLime;
@@ -216,6 +234,7 @@ procedure TFormProcessInfo.AtTmTxRemoveFinish(const Item: TSystemHandleEntry;
   Index: Integer);
 begin
   lvHandles.Items.Delete(Index);
+  cmAssign.Delete(Index + 1); // The first item is "No transaction", skip it
 end;
 
 procedure TFormProcessInfo.AtTmTxRemoveStart(const Item: TSystemHandleEntry;
@@ -230,10 +249,43 @@ begin
   Close;
 end;
 
+procedure TFormProcessInfo.cmAssignClick(Sender: TObject);
+var
+  hxProcess, hxThread: IHandle;
+  HandleValue: NativeUInt;
+  i: Integer;
+begin
+  if (lvThreads.SelCount = 0) or not (Sender is TMenuItem) then
+    Exit;
+
+  HandleValue := (Sender as TMenuItem).Tag;
+  NtxOpenProcess(hxProcess, PID, PROCESS_SET_THREAD_TRANSACTION).RaiseOnError;
+
+  for i := 0 to Threads.Count - 1 do
+    if lvThreads.Items[i].Selected then
+    begin
+      // Open the target thread
+      NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
+        THREAD_QUERY_LIMITED_INFORMATION or THREAD_SUSPEND_RESUME).RaiseOnError;
+
+      // Suspend it to prevent race conditions
+      NtxSuspendThread(hxThread.Value).RaiseOnError;
+      try
+        // Assign transaction
+        RtlxSetTransactionThread(hxProcess.Value, hxThread.Value,
+          HandleValue).RaiseOnError;
+      finally
+        NtxResumeThread(hxThread.Value);
+      end;
+    end;
+
+  FormMain.ForceTimerUpdate;
+end;
+
 constructor TFormProcessInfo.CreateDlg(ProcessID: NativeUInt);
 begin
   PID := ProcessID;
-  NtxOpenProcess(hxProcess, PID, PROCESS_GET_THREAD_TRANSACTION);
+  NtxOpenProcess(hxProcessVmRead, PID, PROCESS_GET_THREAD_TRANSACTION);
   inherited Create(FormMain);
   Show;
 end;
