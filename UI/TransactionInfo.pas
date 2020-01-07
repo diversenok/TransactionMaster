@@ -6,7 +6,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls,
   Vcl.Menus, Vcl.ExtCtrls, Vcl.Graphics, VclEx.ListView, NtUtils.Objects,
-  NtUtils.Objects.Snapshots, NtUiLib.HysteresisList;
+  NtUtils.Objects.Snapshots, NtUiLib.HysteresisList,
+  NtUtils.Processes.Snapshots;
 
 type
   TFormTmTxInfo = class(TForm)
@@ -37,12 +38,12 @@ type
     IsFirstUpdate: Boolean;
     procedure UpdateProperties;
     procedure UpdateBasicInfo;
-    procedure AddMissingProcessIcons;
     procedure AtConsumerAddStart(const Item: TSystemHandleEntry; Index: Integer);
     procedure AtConsumerAddFinish(const Item: TSystemHandleEntry; Index: Integer);
     procedure AtConsumerRemoveStart(const Item: TSystemHandleEntry; Index: Integer);
     procedure AtConsumerRemoveFinish(const Item: TSystemHandleEntry; Index: Integer);
     procedure AtHandleSnapshot(const Handles: TArray<TSystemHandleEntry>);
+    procedure AtNewProcessArrive(const Processes: TArray<TProcessEntry>);
     procedure AtShutdown(const Sender: TObject);
   public
     constructor CreateDlg(Transcation: IHandle);
@@ -52,7 +53,7 @@ implementation
 
 uses
   NtUtils.Transactions, Ntapi.nttmapi, Ntapi.ntobapi, NtUtils.Access,
-  NtUtils.Processes.Snapshots, DelphiUtils.Strings, NtUtils.Exceptions,
+  DelphiUtils.Strings, NtUtils.Exceptions,
   System.UITypes, NtUiLib.Icons, NtUtils.Processes, Ntapi.ntpsapi,
   ProcessList, MainForm, ProcessInfo;
 
@@ -62,33 +63,6 @@ const
   COMMIT_ROLLBACK_WARNING = 'Commiting or rolling back a transaction ' +
     'invalidates all file handles opened for this transaction. Programs that' +
     'use this transaction might misbehave. Continue anyway?';
-
-procedure TFormTmTxInfo.AddMissingProcessIcons;
-var
-  Processes: TArray<TProcessEntry>;
-  FileName: String;
-  Entry: PProcessEntry;
-  i: Integer;
-begin
-  if not NtxEnumerateProcesses(Processes).IsSuccess then
-    SetLength(Processes, 0);
-
-  for i := 0 to Consumers.Count - 1 do
-    if hdAddStart in Consumers[i].BelongsToDelta then
-    begin
-      Entry := NtxFindProcessById(Processes, Consumers[i].Data.UniqueProcessId);
-      FileName := NtxTryQueryImageProcessById(Consumers[i].Data.UniqueProcessId);
-
-      if Assigned(Entry) then
-        lvConsumers.Items[i].Cell[0] := Entry.ImageName
-      else if FileName <> '' then
-        lvConsumers.Items[i].Cell[0] := ExtractFileName(FileName)
-      else
-        lvConsumers.Items[i].Cell[0] := 'Unknown';
-
-      lvConsumers.Items[i].ImageIndex := TProcessIcons.GetIcon(FileName);
-    end;
-end;
 
 procedure TFormTmTxInfo.AtConsumerAddFinish(const Item: TSystemHandleEntry;
   Index: Integer);
@@ -137,8 +111,9 @@ begin
     Consumers.Update(FilteredHandles);
 
     // If new items arrived, update their process names and icons
+    // Note: this event will automatically unsunscribe after update
     if Consumers.AddStartDelta > 0 then
-      AddMissingProcessIcons;
+      FormMain.OnProcessSnapshotting.Subscribe(AtNewProcessArrive);
   end;
   lvConsumers.Items.EndUpdate;
 
@@ -150,6 +125,33 @@ begin
   lvInfo.Items.EndUpdate;
 
   IsFirstUpdate := False;
+end;
+
+procedure TFormTmTxInfo.AtNewProcessArrive(
+  const Processes: TArray<TProcessEntry>);
+var
+  FileName: String;
+  Entry: PProcessEntry;
+  i: Integer;
+begin
+  for i := 0 to Consumers.Count - 1 do
+    if hdAddStart in Consumers[i].BelongsToDelta then
+    begin
+      Entry := NtxFindProcessById(Processes, Consumers[i].Data.UniqueProcessId);
+      FileName := NtxTryQueryImageProcessById(Consumers[i].Data.UniqueProcessId);
+
+      if Assigned(Entry) then
+        lvConsumers.Items[i].Cell[0] := Entry.ImageName
+      else if FileName <> '' then
+        lvConsumers.Items[i].Cell[0] := ExtractFileName(FileName)
+      else
+        lvConsumers.Items[i].Cell[0] := 'Unknown';
+
+      lvConsumers.Items[i].ImageIndex := TProcessIcons.GetIcon(FileName);
+    end;
+
+  // Update only once
+  FormMain.OnProcessSnapshotting.Unsubscribe(AtNewProcessArrive);
 end;
 
 procedure TFormTmTxInfo.AtShutdown(const Sender: TObject);

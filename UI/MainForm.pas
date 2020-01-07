@@ -36,7 +36,6 @@ type
     FOnProcessSnapshotting: TEvent<TArray<TProcessEntry>>;
     FOnShutdown: TEvent<TObject>;
     procedure FillTransactionInfo(const Item: TGuid; Index: Integer);
-    procedure AddMissingProcessIcons;
     procedure AtActiveAddStart(const Item: TGuid; Index: Integer);
     procedure AtActiveAddFinish(const Item: TGuid; Index: Integer);
     procedure AtActiveRemoveStart(const Item: TGuid; Index: Integer);
@@ -47,6 +46,7 @@ type
     procedure AtConsumerRemoveFinish(const Item: TSystemHandleEntry; Index: Integer);
     procedure AtTmTxEnumeration(const Transactions: TArray<TGuid>);
     procedure AtHandleSnapshot(const Handles: TArray<TSystemHandleEntry>);
+    procedure AtNewProcessArrive(const Processes: TArray<TProcessEntry>);
   public
     procedure ForceTimerUpdate;
     property OnHandleSnapshotting: TEvent<TArray<TSystemHandleEntry>> read FOnHandleSnapshotting;
@@ -79,33 +79,6 @@ function CompareHandleEntries(const A, B: TSystemHandleEntry): Boolean;
 begin
   Result := (A.UniqueProcessId = B.UniqueProcessId) and
     (A.HandleValue = B.HandleValue) and (A.GrantedAccess = B.GrantedAccess);
-end;
-
-procedure TFormMain.AddMissingProcessIcons;
-var
-  Processes: TArray<TProcessEntry>;
-  FileName: String;
-  Entry: PProcessEntry;
-  i: Integer;
-begin
-  if not NtxEnumerateProcesses(Processes).IsSuccess then
-    SetLength(Processes, 0);
-
-  for i := 0 to Consumers.Count - 1 do
-    if hdAddStart in Consumers[i].BelongsToDelta then
-    begin
-      Entry := NtxFindProcessById(Processes, Consumers[i].Data.UniqueProcessId);
-      FileName := NtxTryQueryImageProcessById(Consumers[i].Data.UniqueProcessId);
-
-      if Assigned(Entry) then
-        lvHandles.Items[i].Cell[0] := Entry.ImageName
-      else if FileName <> '' then
-        lvHandles.Items[i].Cell[0] := ExtractFileName(FileName)
-      else
-        lvHandles.Items[i].Cell[0] := 'Unknown';
-
-      lvHandles.Items[i].ImageIndex := TProcessIcons.GetIcon(FileName);
-    end;
 end;
 
 procedure TFormMain.appEventsException(Sender: TObject; E: Exception);
@@ -182,10 +155,37 @@ begin
     Consumers.Update(Handles);
 
     // If new items arrived, update their process names and icons
+    // Note: this event will automatically unsunscribe after update
     if Consumers.AddStartDelta > 0 then
-      AddMissingProcessIcons;
+      OnProcessSnapshotting.Subscribe(AtNewProcessArrive);
   end;
   lvHandles.Items.EndUpdate;
+end;
+
+procedure TFormMain.AtNewProcessArrive(const Processes: TArray<TProcessEntry>);
+var
+  FileName: String;
+  Entry: PProcessEntry;
+  i: Integer;
+begin
+  for i := 0 to Consumers.Count - 1 do
+    if hdAddStart in Consumers[i].BelongsToDelta then
+    begin
+      Entry := NtxFindProcessById(Processes, Consumers[i].Data.UniqueProcessId);
+      FileName := NtxTryQueryImageProcessById(Consumers[i].Data.UniqueProcessId);
+
+      if Assigned(Entry) then
+        lvHandles.Items[i].Cell[0] := Entry.ImageName
+      else if FileName <> '' then
+        lvHandles.Items[i].Cell[0] := ExtractFileName(FileName)
+      else
+        lvHandles.Items[i].Cell[0] := 'Unknown';
+
+      lvHandles.Items[i].ImageIndex := TProcessIcons.GetIcon(FileName);
+    end;
+
+  // We need to update it only once
+  OnProcessSnapshotting.Unsubscribe(AtNewProcessArrive);
 end;
 
 procedure TFormMain.AtTmTxEnumeration(const Transactions: TArray<TGuid>);
