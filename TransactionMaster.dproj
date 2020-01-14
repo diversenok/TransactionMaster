@@ -221,6 +221,7 @@
         <DCCReference Include="NtUtils\NtUtils.Tokens.Query.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Transactions.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Transactions.Remote.pas"/>
+        <DCCReference Include="NtUtils\Headers\NtUtils.Version.pas"/>
         <DCCReference Include="NtUtils\NtUtils.WinSafer.pas"/>
         <DCCReference Include="NtUtils\NtUtils.WinStation.pas"/>
         <DCCReference Include="NtUtils\NtUtils.WinUser.pas"/>

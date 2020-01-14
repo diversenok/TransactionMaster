@@ -109,6 +109,7 @@ object FormMain: TFormMain
     Top = 199
     Width = 131
     Height = 25
+    Anchors = [akTop, akRight]
     Caption = 'Transact a process...'
     TabOrder = 3
   end

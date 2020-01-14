@@ -62,7 +62,7 @@ uses
   MainForm, TransactionInfo, Ntapi.nttmapi, Ntapi.ntpsapi, Ntapi.ntkeapi,
   NtUtils.Access, NtUtils.Processes, NtUtils.Threads, NtUtils.Exceptions,
   NtUtils.Transactions, NtUtils.Transactions.Remote, NtUtils.WinUser,
-  DelphiUtils.Strings, DelphiUtils.Arrays;
+  DelphiUtils.Strings, DelphiUtils.Arrays, System.UiTypes;
 
 {$R *.dfm}
 

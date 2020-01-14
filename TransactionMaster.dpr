@@ -94,6 +94,7 @@ uses
   NtUtils.Tokens.Query in 'NtUtils\NtUtils.Tokens.Query.pas',
   NtUtils.Transactions in 'NtUtils\NtUtils.Transactions.pas',
   NtUtils.Transactions.Remote in 'NtUtils\NtUtils.Transactions.Remote.pas',
+  NtUtils.Version in 'NtUtils\Headers\NtUtils.Version.pas',
   NtUtils.WinSafer in 'NtUtils\NtUtils.WinSafer.pas',
   NtUtils.WinStation in 'NtUtils\NtUtils.WinStation.pas',
   NtUtils.WinUser in 'NtUtils\NtUtils.WinUser.pas',

@@ -94,6 +94,7 @@ object FormProcessInfo: TFormProcessInfo
         ViewStyle = vsReport
         OnDblClick = cmHandleInspect
         ColoringItems = True
+        PopupOnItemsOnly = True
       end
     end
   end

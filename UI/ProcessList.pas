@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, VclEx.ListView,
   Vcl.StdCtrls, System.ImageList, Vcl.ImgList, Vcl.ExtCtrls,
-  NtUtils.Processes.Snapshots;
+  NtUtils.Processes.Snapshots, DelphiUtils.Arrays;
 
 type
   TFormProcessList = class(TForm)
@@ -22,9 +22,10 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
   private
-    ProcessTree: TArray<TProcessTreeNode>;
-    function ComputeIndent(Node: PProcessTreeNode): Integer;
-    procedure AddProcessNode(Node: PProcessTreeNode; Level: Integer);
+    ProcessTree: TArray<TTreeNode<TProcessEntry>>;
+    function ComputeIndent(const Node: TTreeNode<TProcessEntry>): Integer;
+    procedure AddProcessNode(const Node: TTreeNode<TProcessEntry>;
+      Level: Integer);
     procedure SelectFirstVisible;
   public
     class function Pick(AOwner: TComponent): TProcessEntry;
@@ -40,7 +41,8 @@ uses
 const
   GROUP_SEARCH_IND = 0;
 
-procedure TFormProcessList.AddProcessNode(Node: PProcessTreeNode; Level: Integer);
+procedure TFormProcessList.AddProcessNode(const Node: TTreeNode<TProcessEntry>;
+  Level: Integer);
 var
   i: Integer;
 begin
@@ -52,12 +54,12 @@ begin
     Cell[2] := IntToStr(Node.Entry.Process.SessionId);
     ImageIndex := TProcessIcons.GetIconByPid(Node.Entry.Process.ProcessId);
     Indent := Level;
-    Data := Node;
+    Data := @Node;
   end;
 
   // Add all children
   for i := 0 to High(Node.Children) do
-    AddProcessNode(Node.Children[i], Level + 1);
+    AddProcessNode(Node.Children[i]^, Level + 1);
 end;
 
 procedure TFormProcessList.btnRefreshClick(Sender: TObject);
@@ -74,7 +76,7 @@ begin
     // Add parentless processes and then all other recursively
     for i := 0 to High(ProcessTree) do
       if not Assigned(ProcessTree[i].Parent) then
-        AddProcessNode(@ProcessTree[i], 0);
+        AddProcessNode(ProcessTree[i], 0);
 
   finally
     lvProcesses.Items.EndUpdate;
@@ -82,14 +84,17 @@ begin
   end;
 end;
 
-function TFormProcessList.ComputeIndent(Node: PProcessTreeNode): Integer;
+function TFormProcessList.ComputeIndent(const Node: TTreeNode<TProcessEntry>): Integer;
+var
+  pNode: ^TTreeNode<TProcessEntry>;
 begin
   Result := -1;
+  pNode := @Node;
 
   repeat
-    Node := Node.Parent;
+    pNode := pNode.Parent;
     Inc(Result);
-  until not Assigned(Node);
+  until not Assigned(pNode);
 end;
 
 procedure TFormProcessList.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -136,7 +141,7 @@ begin
 
     Assert(Assigned(lvProcesses.Selected.Data));
 
-    Result := PProcessTreeNode(lvProcesses.Selected.Data).Entry;
+    Result := TTreeNode<TProcessEntry>(lvProcesses.Selected.Data^).Entry;
   end;
 end;
 
@@ -161,7 +166,7 @@ begin
       end
       else
       begin
-        Indent := ComputeIndent(Data);
+        Indent := ComputeIndent(TTreeNode<TProcessEntry>(Data^));
         GroupID := -1;
       end;
 
