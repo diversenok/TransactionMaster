@@ -6,21 +6,29 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   Vcl.ComCtrls, VclEx.ListView, Vcl.Menus, NtUiLib.HysteresisList,
-  NtUtils.Objects.Snapshots, NtUtils.Objects, Winapi.WinNt,
-  NtUtils.Processes.Snapshots;
+  NtUtils.Objects.Snapshots, NtUtils.Objects, NtUtils.Processes.Snapshots,
+  NtUtils.Exceptions, TmTxTrackerUtils;
 
 type
   TFormProcessInfo = class(TForm)
     btnClose: TButton;
+    btnSetFuture: TButton;
+    cbFutureTmTx: TComboBox;
     cmAssign: TMenuItem;
     cmAssignNone: TMenuItem;
     cmCloseHandle: TMenuItem;
+    cmIncludeExisting: TMenuItem;
     cmInspect: TMenuItem;
+    cmRefreshFuture: TMenuItem;
     cmResume: TMenuItem;
+    cmSeparator: TMenuItem;
     cmSuspend: TMenuItem;
+    gbTracking: TGroupBox;
+    lblTrackingState: TLabel;
     lvHandles: TListViewEx;
     lvThreads: TListViewEx;
     pageControl: TPageControl;
+    popupFuture: TPopupMenu;
     popupHandle: TPopupMenu;
     popupThread: TPopupMenu;
     tabHandles: TTabSheet;
@@ -28,15 +36,18 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure btnCloseClick(Sender: TObject);
+    procedure btnSetFutureClick(Sender: TObject);
     procedure cmAssignClick(Sender: TObject);
     procedure cmCloseHandleClick(Sender: TObject);
     procedure cmHandleInspect(Sender: TObject);
+    procedure cmRefreshFutureClick(Sender: TObject);
     procedure cmResumeClick(Sender: TObject);
     procedure cmSuspendClick(Sender: TObject);
     procedure FormKeyPress(Sender: TObject; var Key: Char);
   private
     PID: NativeUInt;
-    hxProcessVmRead: IHandle;
+    hxProcessRead: IHandle;
+    TmTxTracker: TTmTxTracker;
     hxThreads: TArray<IHandle>;
     Transactions: THysteresisList<TSystemHandleEntry>;
     Threads: THysteresisList<TSystemThreadInformation>;
@@ -52,6 +63,7 @@ type
     procedure AtHandleSnapshot(const Handles: TArray<TSystemHandleEntry>);
     procedure AtProcessSnapshot(const Processes: TArray<TProcessEntry>);
     procedure AtShutdown(const Sender: TObject);
+    function FindTmTxTrackerDll: TNtxStatus;
   public
     constructor CreateDlg(ProcessID: NativeUInt);
   end;
@@ -60,9 +72,9 @@ implementation
 
 uses
   MainForm, TransactionInfo, Ntapi.nttmapi, Ntapi.ntpsapi, Ntapi.ntkeapi,
-  NtUtils.Access, NtUtils.Processes, NtUtils.Threads, NtUtils.Exceptions,
-  NtUtils.Transactions, NtUtils.Transactions.Remote, NtUtils.WinUser,
-  DelphiUtils.Strings, DelphiUtils.Arrays, System.UiTypes;
+  NtUtils.Access, NtUtils.Processes, NtUtils.Threads, NtUtils.Transactions,
+  NtUtils.Transactions.Remote, NtUtils.WinUser, DelphiUtils.Strings,
+  DelphiUtils.Arrays, System.UiTypes, NtUtils.Exceptions.Report;
 
 {$R *.dfm}
 
@@ -96,17 +108,18 @@ begin
       hxProcess, PID, PROCESS_DUP_HANDLE).IsSuccess then
       for i := 0 to Transactions.Count - 1 do
         if (hdAddStart in Transactions[i].BelongsToDelta) and
-          NtxDuplicateObjectFrom(hxProcess.Value,
+          NtxDuplicateObjectFrom(hxProcess.Handle,
           Transactions[i].Data.HandleValue, hxTransaction).IsSuccess and
-          NtxQueryPropertiesTransaction(hxTransaction.Value,
+          NtxQueryPropertiesTransaction(hxTransaction.Handle,
           Properties).IsSuccess then
           begin
             lvHandles.Items[i].Cell[2] := Properties.Description;
 
-            // Update caption of the sub-menu as well. Note: the first
-            // sub-menu is "No transaction", skip it
+            // Update caption of the sub-menu and future transaction as well.
+            // Note: the first item is "No transaction", skip it
             cmAssign.Items[i + 1].Caption := lvHandles.Items[i].Cell[0] +
               ' (' + Properties.Description + ')';
+            cbFutureTmTx.Items[i + 1] := cmAssign.Items[i + 1].Caption;
           end;
   end;
   lvHandles.Items.EndUpdate;
@@ -145,11 +158,11 @@ begin
      end;
 
     // Update threads' current transactions
-    if Assigned(hxProcessVmRead) then
+    if Assigned(hxProcessRead) then
       for i := 0 to Threads.Count - 1 do
         if (Threads[i].State <> hisDeleted) and Assigned(hxThreads[i]) then
-          if RtlxGetTransactionThread(hxProcessVmRead.Value, hxThreads[i].Value,
-            HandleValue).IsSuccess then
+          if RtlxGetTransactionThread(hxProcessRead.Handle,
+            hxThreads[i].Handle, HandleValue).IsSuccess then
           begin
             if HandleValue = 0 then
               lvThreads.Items[i].Cell[2] := 'No'
@@ -232,6 +245,9 @@ begin
     Menu.OnClick := cmAssignClick;
     cmAssign.Add(Menu);
 
+    // Add an item for future transactions
+    cbFutureTmTx.Items.Add(Cell[0]);
+
     if not IsFirstUpdate then
       Color := clLime;
   end;
@@ -241,7 +257,10 @@ procedure TFormProcessInfo.AtTmTxRemoveFinish(const Item: TSystemHandleEntry;
   Index: Integer);
 begin
   lvHandles.Items.Delete(Index);
-  cmAssign.Delete(Index + 1); // The first item is "No transaction", skip it
+
+  // The first item is "No transaction", skip it
+  cmAssign.Delete(Index + 1);
+  cbFutureTmTx.Items.Delete(Index + 1);
 end;
 
 procedure TFormProcessInfo.AtTmTxRemoveStart(const Item: TSystemHandleEntry;
@@ -254,6 +273,48 @@ end;
 procedure TFormProcessInfo.btnCloseClick(Sender: TObject);
 begin
   Close;
+end;
+
+procedure TFormProcessInfo.btnSetFutureClick(Sender: TObject);
+var
+  hxProcess: IHandle;
+  Value: NativeUInt;
+begin
+  if not Assigned(hxProcessRead) then
+    Exit;
+
+  try
+    // We need a thread-tracking DLL to proceed
+    if not Assigned(TmTxTracker.DllBase) then
+    begin
+      // Inject it
+      NtxOpenProcess(hxProcess, PID, PROCESS_INJECT_DLL).RaiseOnError;
+      InjectTmTxTracker(hxProcess.Handle).RaiseOnError;
+
+      // Find its address
+      FindTmTxTrackerDll.RaiseOnError;
+    end;
+
+    // Prepare the remote handle value
+    if cbFutureTmTx.ItemIndex = 0 then
+      Value := 0
+    else
+      Value := Transactions.Items[cbFutureTmTx.ItemIndex - 1].Data.HandleValue;
+
+    // Set it
+    NtxOpenProcess(hxProcess, PID, PROCESS_SET_FUTURE_TRANASCTION).RaiseOnError;
+    SetFutureTransaction(hxProcess.Handle, TmTxTracker, Value).RaiseOnError;
+
+    if cmIncludeExisting.Checked then
+    begin
+      // Include existing threads as well
+      NtxOpenProcess(hxProcess, PID, PROCESS_SET_PROCESS_TRANSACTION).RaiseOnError;
+      RtlxSetTransactionProcess(hxProcess.Handle, Value).RaiseOnError;
+      FormMain.ForceTimerUpdate;
+    end;
+  finally
+    cmRefreshFutureClick(cmRefreshFuture);
+  end;
 end;
 
 procedure TFormProcessInfo.cmAssignClick(Sender: TObject);
@@ -271,18 +332,20 @@ begin
   for i := 0 to Threads.Count - 1 do
     if lvThreads.Items[i].Selected and (Threads[i].State <> hisDeleted) then
     begin
+      // TODO: Add abort-continue buttons to the error messages
+
       // Open the target thread
       NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
-        THREAD_QUERY_LIMITED_INFORMATION or THREAD_SUSPEND_RESUME).RaiseOnError;
+        THREAD_SET_TRANSACTION or THREAD_SUSPEND_RESUME).RaiseOnError;
 
       // Suspend it to prevent race conditions
-      NtxSuspendThread(hxThread.Value).RaiseOnError;
+      NtxSuspendThread(hxThread.Handle).RaiseOnError;
       try
         // Assign transaction
-        RtlxSetTransactionThread(hxProcess.Value, hxThread.Value,
+        RtlxSetTransactionThread(hxProcess.Handle, hxThread.Handle,
           HandleValue).RaiseOnError;
       finally
-        NtxResumeThread(hxThread.Value);
+        NtxResumeThread(hxThread.Handle);
       end;
     end;
 
@@ -300,7 +363,7 @@ begin
   begin
     NtxOpenProcess(hxProcess, PID, PROCESS_DUP_HANDLE).RaiseOnError;
 
-    NtxCloseRemoteHandle(hxProcess.Value,
+    NtxCloseRemoteHandle(hxProcess.Handle,
       Transactions[lvHandles.Selected.Index].Data.HandleValue).RaiseOnError;
   end;
 end;
@@ -314,10 +377,57 @@ begin
 
   // TODO: Duplicate with maximum allowed access
   NtxOpenProcess(hxProcess, PID, PROCESS_DUP_HANDLE).RaiseOnError;
-  NtxDuplicateObjectFrom(hxProcess.Value, Transactions[lvHandles.Selected.Index]
-    .Data.HandleValue, hxTransaction).RaiseOnError;
+  NtxDuplicateObjectFrom(hxProcess.Handle, Transactions[lvHandles.Selected.
+    Index].Data.HandleValue, hxTransaction).RaiseOnError;
 
   TFormTmTxInfo.CreateDlg(hxTransaction);
+end;
+
+procedure TFormProcessInfo.cmRefreshFutureClick(Sender: TObject);
+var
+  Value: NativeUInt;
+  Status: TNtxStatus;
+  i: Integer;
+begin
+  if not Assigned(hxProcessRead) then
+  begin
+    cbFutureTmTx.ItemIndex := -1;
+    Exit;
+  end;
+
+  if Assigned(TmTxTracker.DllBase) then
+  begin
+    // Read the transaction handle
+    Status := GetFutureTransaction(hxProcessRead.Handle, TmTxTracker, Value);
+
+    // Explicitly throw exceptions on user actions
+    if Sender = cmRefreshFuture then
+      Status.RaiseOnError
+    else if not Status.IsSuccess then
+    begin
+      cbFutureTmTx.ItemIndex := -1;
+      Exit;
+    end;
+  end
+  else
+    Value := 0; // No tracking => no future transactions
+
+  if Value = 0 then
+  begin
+    // Use "No transaction" item
+    cbFutureTmTx.ItemIndex := 0;
+    Exit;
+  end;
+
+  // Find the corresponding item
+  for i := 0 to Transactions.Count - 1 do
+    if Transactions[i].Data.HandleValue = Value then
+    begin
+      cbFutureTmTx.ItemIndex := i + 1;
+      Exit;
+    end;
+
+  cbFutureTmTx.ItemIndex := -1;
 end;
 
 procedure TFormProcessInfo.cmResumeClick(Sender: TObject);
@@ -331,7 +441,7 @@ begin
       NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
         THREAD_SUSPEND_RESUME).RaiseOnError;
 
-      NtxResumeThread(hxThread.Value).RaiseOnError;
+      NtxResumeThread(hxThread.Handle).RaiseOnError;
     end;
 end;
 
@@ -346,16 +456,40 @@ begin
       NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
         THREAD_SUSPEND_RESUME).RaiseOnError;
 
-      NtxSuspendThread(hxThread.Value).RaiseOnError;
+      NtxSuspendThread(hxThread.Handle).RaiseOnError;
     end;
 end;
 
 constructor TFormProcessInfo.CreateDlg(ProcessID: NativeUInt);
 begin
   PID := ProcessID;
-  NtxOpenProcess(hxProcessVmRead, PID, PROCESS_GET_THREAD_TRANSACTION);
   inherited Create(FormMain);
   Show;
+end;
+
+function TFormProcessInfo.FindTmTxTrackerDll: TNtxStatus;
+begin
+  cbFutureTmTx.Enabled := False;
+  btnSetFuture.Enabled := False;
+
+  // Find the tracker dll
+  Result := FindTmTxTracker(hxProcessRead.Handle, TmTxTracker);
+
+  if not Result.IsSuccess then
+  begin
+    lblTrackingState.Caption := 'Unknown: can''t enumerate loaded modules.';
+    lblTrackingState.Hint := NtxVerboseStatusMessage(Result);
+  end
+  else
+  begin
+    cbFutureTmTx.Enabled := True;
+    btnSetFuture.Enabled := True;
+
+    if Assigned(TmTxTracker.DllBase) then
+      lblTrackingState.Caption := 'Tracking DLL is loaded.'
+    else
+      lblTrackingState.Caption := 'Tracking DLL is not loaded.';
+  end;
 end;
 
 procedure TFormProcessInfo.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -369,7 +503,16 @@ begin
 end;
 
 procedure TFormProcessInfo.FormCreate(Sender: TObject);
+var
+  Status: TNtxStatus;
 begin
+  // Open the process for read access
+  Status := NtxOpenProcess(hxProcessRead, PID, PROCESS_ENUMERATE_MODULES or
+    PROCESS_GET_THREAD_TRANSACTION);
+
+  if not Status.IsSuccess then
+    lblTrackingState.Hint := NtxVerboseStatusMessage(Status);
+
   // Subscribe for handle list changes
   Transactions := THysteresisList<TSystemHandleEntry>.Create(
     CompareHandleEntries, 3);
@@ -393,6 +536,11 @@ begin
 
   IsFirstUpdate := True;
   FormMain.ForceTimerUpdate;
+
+  // Update future thread information
+  if Assigned(hxProcessRead) then
+    if FindTmTxTrackerDll.IsSuccess then
+      cmRefreshFutureClick(Self);
 end;
 
 procedure TFormProcessInfo.FormKeyPress(Sender: TObject; var Key: Char);

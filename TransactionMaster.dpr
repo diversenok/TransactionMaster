@@ -38,11 +38,11 @@ uses
   Winapi.winsta in 'NtUtils\Headers\Winapi.winsta.pas',
   Winapi.WinUser in 'NtUtils\Headers\Winapi.WinUser.pas',
   DelphiUtils.Arrays in 'NtUtils\DelphiUtils.Arrays.pas',
+  DelphiUtils.AutoObject in 'NtUtils\DelphiUtils.AutoObject.pas',
   DelphiUtils.Events in 'NtUtils\DelphiUtils.Events.pas',
   DelphiUtils.Strings in 'NtUtils\DelphiUtils.Strings.pas',
   NtUtils.Access.Expected in 'NtUtils\NtUtils.Access.Expected.pas',
   NtUtils.Access in 'NtUtils\NtUtils.Access.pas',
-  NtUtils.AutoHandle in 'NtUtils\NtUtils.AutoHandle.pas',
   NtUtils.Debug.HardwareBP in 'NtUtils\NtUtils.Debug.HardwareBP.pas',
   NtUtils.Debug in 'NtUtils\NtUtils.Debug.pas',
   NtUtils.Environment in 'NtUtils\NtUtils.Environment.pas',
@@ -56,6 +56,7 @@ uses
   NtUtils.Exec.Win32 in 'NtUtils\NtUtils.Exec.Win32.pas',
   NtUtils.Exec.Wmi in 'NtUtils\NtUtils.Exec.Wmi.pas',
   NtUtils.Files in 'NtUtils\NtUtils.Files.pas',
+  NtUtils.ImageHlp in 'NtUtils\NtUtils.ImageHlp.pas',
   NtUtils.Job in 'NtUtils\NtUtils.Job.pas',
   NtUtils.Ldr in 'NtUtils\NtUtils.Ldr.pas',
   NtUtils.Lsa.Audit in 'NtUtils\NtUtils.Lsa.Audit.pas',
@@ -69,6 +70,7 @@ uses
   NtUtils.Objects.Security in 'NtUtils\NtUtils.Objects.Security.pas',
   NtUtils.Objects.Snapshots in 'NtUtils\NtUtils.Objects.Snapshots.pas',
   NtUtils.Processes.Memory in 'NtUtils\NtUtils.Processes.Memory.pas',
+  NtUtils.Processes.Modules in 'NtUtils\NtUtils.Processes.Modules.pas',
   NtUtils.Processes in 'NtUtils\NtUtils.Processes.pas',
   NtUtils.Processes.Snapshots in 'NtUtils\NtUtils.Processes.Snapshots.pas',
   NtUtils.Profiles in 'NtUtils\NtUtils.Profiles.pas',
@@ -80,6 +82,7 @@ uses
   NtUtils.Security.Acl in 'NtUtils\NtUtils.Security.Acl.pas',
   NtUtils.Security.AppContainer in 'NtUtils\NtUtils.Security.AppContainer.pas',
   NtUtils.Security.Sid in 'NtUtils\NtUtils.Security.Sid.pas',
+  NtUtils.Shellcode.Dll in 'NtUtils\NtUtils.Shellcode.Dll.pas',
   NtUtils.Shellcode in 'NtUtils\NtUtils.Shellcode.pas',
   NtUtils.Strings in 'NtUtils\NtUtils.Strings.pas',
   NtUtils.Svc in 'NtUtils\NtUtils.Svc.pas',
@@ -106,7 +109,8 @@ uses
   MainForm in 'UI\MainForm.pas' {FormMain},
   TransactionInfo in 'UI\TransactionInfo.pas' {FormTmTxInfo},
   ProcessList in 'UI\ProcessList.pas' {FormProcessList},
-  ProcessInfo in 'UI\ProcessInfo.pas' {FormProcessInfo};
+  ProcessInfo in 'UI\ProcessInfo.pas' {FormProcessInfo},
+  TmTxTrackerUtils in 'TmTxTrackerUtils.pas';
 
 {$R *.res}
 
@@ -114,6 +118,7 @@ begin
   {$IFDEF Debug} ReportMemoryLeaksOnShutdown := True; {$ENDIF}
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
+  Application.HintHidePause := 25000;
   Application.CreateForm(TFormMain, FormMain);
   Application.Run;
 end.

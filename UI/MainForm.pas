@@ -233,12 +233,12 @@ begin
     with lvActiveTmTx.Items[Index] do
     begin
       // Get transaction description
-      if NtxQueryPropertiesTransaction(hxTransaction.Value,
+      if NtxQueryPropertiesTransaction(hxTransaction.Handle,
         Properties).IsSuccess then
         Cell[1] := Properties.Description;
 
       // Get handle count (excluding ours)
-      if  NtxQueryBasicInfoObject(hxTransaction.Value, Info).IsSuccess then
+      if  NtxQueryBasicInfoObject(hxTransaction.Handle, Info).IsSuccess then
         Cell[2] := IntToStr(Info.HandleCount - 1);
     end;
 end;

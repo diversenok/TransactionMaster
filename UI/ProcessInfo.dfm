@@ -2,7 +2,7 @@ object FormProcessInfo: TFormProcessInfo
   Left = 0
   Top = 0
   Caption = 'Process info'
-  ClientHeight = 278
+  ClientHeight = 342
   ClientWidth = 376
   Color = clBtnFace
   DoubleBuffered = True
@@ -14,6 +14,7 @@ object FormProcessInfo: TFormProcessInfo
   KeyPreview = True
   OldCreateOrder = False
   Position = poOwnerFormCenter
+  ShowHint = True
   OnClose = FormClose
   OnCreate = FormCreate
   OnKeyPress = FormKeyPress
@@ -24,20 +25,26 @@ object FormProcessInfo: TFormProcessInfo
     Left = 3
     Top = 3
     Width = 370
-    Height = 243
+    Height = 307
     Margins.Bottom = 32
     ActivePage = tabThreads
     Align = alClient
+    ParentShowHint = False
+    ShowHint = True
     TabOrder = 0
     object tabThreads: TTabSheet
       Caption = 'Threads'
       object lvThreads: TListViewEx
+        AlignWithMargins = True
         Left = 0
         Top = 0
         Width = 362
-        Height = 215
+        Height = 192
+        Margins.Left = 0
+        Margins.Top = 0
+        Margins.Right = 0
+        Margins.Bottom = 6
         Align = alClient
-        BorderStyle = bsNone
         Columns = <
           item
             Caption = 'TID'
@@ -62,6 +69,50 @@ object FormProcessInfo: TFormProcessInfo
         ColoringItems = True
         PopupOnItemsOnly = True
       end
+      object gbTracking: TGroupBox
+        AlignWithMargins = True
+        Left = 3
+        Top = 201
+        Width = 356
+        Height = 75
+        Align = alBottom
+        Caption = 'Future threads: '
+        TabOrder = 1
+        object lblTrackingState: TLabel
+          Left = 12
+          Top = 51
+          Width = 333
+          Height = 13
+          Anchors = [akLeft, akTop, akRight]
+          AutoSize = False
+          Caption = 'Unknown: can'#39't open the process.'
+          EllipsisPosition = epEndEllipsis
+        end
+        object cbFutureTmTx: TComboBox
+          Left = 12
+          Top = 22
+          Width = 256
+          Height = 21
+          Style = csDropDownList
+          Anchors = [akLeft, akTop, akRight]
+          Enabled = False
+          TabOrder = 0
+          Items.Strings = (
+            'No transaction (default)')
+        end
+        object btnSetFuture: TButton
+          Left = 274
+          Top = 20
+          Width = 75
+          Height = 25
+          Caption = 'Set'
+          DropDownMenu = popupFuture
+          Enabled = False
+          Style = bsSplitButton
+          TabOrder = 1
+          OnClick = btnSetFutureClick
+        end
+      end
     end
     object tabHandles: TTabSheet
       Caption = 'Transactions'
@@ -70,7 +121,7 @@ object FormProcessInfo: TFormProcessInfo
         Left = 0
         Top = 0
         Width = 362
-        Height = 215
+        Height = 279
         Align = alClient
         BorderStyle = bsNone
         Columns = <
@@ -100,7 +151,7 @@ object FormProcessInfo: TFormProcessInfo
   end
   object btnClose: TButton
     Left = 295
-    Top = 249
+    Top = 313
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
@@ -110,8 +161,8 @@ object FormProcessInfo: TFormProcessInfo
     OnClick = btnCloseClick
   end
   object popupThread: TPopupMenu
-    Left = 63
-    Top = 91
+    Left = 319
+    Top = 83
     object cmAssign: TMenuItem
       Caption = 'Assign a &transaction'
       Default = True
@@ -130,8 +181,8 @@ object FormProcessInfo: TFormProcessInfo
     end
   end
   object popupHandle: TPopupMenu
-    Left = 143
-    Top = 91
+    Left = 319
+    Top = 139
     object cmInspect: TMenuItem
       Caption = 'Inspect'
       Default = True
@@ -142,6 +193,22 @@ object FormProcessInfo: TFormProcessInfo
       Caption = 'Close handle'
       ShortCut = 46
       OnClick = cmCloseHandleClick
+    end
+  end
+  object popupFuture: TPopupMenu
+    Left = 319
+    Top = 27
+    object cmIncludeExisting: TMenuItem
+      AutoCheck = True
+      Caption = 'Include existing threads'
+      Checked = True
+    end
+    object cmSeparator: TMenuItem
+      Caption = '-'
+    end
+    object cmRefreshFuture: TMenuItem
+      Caption = 'Refresh'
+      OnClick = cmRefreshFutureClick
     end
   end
 end

@@ -165,11 +165,11 @@
         <DCCReference Include="NtUtils\Headers\Winapi.winsta.pas"/>
         <DCCReference Include="NtUtils\Headers\Winapi.WinUser.pas"/>
         <DCCReference Include="NtUtils\DelphiUtils.Arrays.pas"/>
+        <DCCReference Include="NtUtils\DelphiUtils.AutoObject.pas"/>
         <DCCReference Include="NtUtils\DelphiUtils.Events.pas"/>
         <DCCReference Include="NtUtils\DelphiUtils.Strings.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Access.Expected.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Access.pas"/>
-        <DCCReference Include="NtUtils\NtUtils.AutoHandle.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Debug.HardwareBP.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Debug.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Environment.pas"/>
@@ -183,6 +183,7 @@
         <DCCReference Include="NtUtils\NtUtils.Exec.Win32.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Exec.Wmi.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Files.pas"/>
+        <DCCReference Include="NtUtils\NtUtils.ImageHlp.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Job.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Ldr.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Lsa.Audit.pas"/>
@@ -196,6 +197,7 @@
         <DCCReference Include="NtUtils\NtUtils.Objects.Security.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Objects.Snapshots.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Processes.Memory.pas"/>
+        <DCCReference Include="NtUtils\NtUtils.Processes.Modules.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Processes.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Processes.Snapshots.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Profiles.pas"/>
@@ -207,6 +209,7 @@
         <DCCReference Include="NtUtils\NtUtils.Security.Acl.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Security.AppContainer.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Security.Sid.pas"/>
+        <DCCReference Include="NtUtils\NtUtils.Shellcode.Dll.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Shellcode.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Strings.pas"/>
         <DCCReference Include="NtUtils\NtUtils.Svc.pas"/>
@@ -232,20 +235,17 @@
         <DCCReference Include="VclEx\VclEx.ListView.pas"/>
         <DCCReference Include="UI\MainForm.pas">
             <Form>FormMain</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="UI\TransactionInfo.pas">
             <Form>FormTmTxInfo</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="UI\ProcessList.pas">
             <Form>FormProcessList</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="UI\ProcessInfo.pas">
             <Form>FormProcessInfo</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="TmTxTrackerUtils.pas"/>
         <RcCompile Include="NtUtils\NtUtils.ErrorMsg.rc">
             <Form>NtUtils.ErrorMsg.res</Form>
         </RcCompile>

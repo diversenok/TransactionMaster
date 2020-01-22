@@ -104,7 +104,7 @@ var
 begin
   // Filter on handle to our transaction
   FilteredHandles := Copy(Handles, Low(Handles), Length(Handles));
-  NtxFilterHandlesByHandle(FilteredHandles, hxTranscation.Value);
+  NtxFilterHandlesByHandle(FilteredHandles, hxTranscation.Handle);
 
   lvConsumers.Items.BeginUpdate;
   begin
@@ -170,7 +170,7 @@ begin
   if TaskMessageDlg('Commit the transaction?', COMMIT_ROLLBACK_WARNING,
     mtWarning, mbYesNoCancel, -1) = mrYes then
   begin
-    NtxCommitTransaction(hxTranscation.Value).RaiseOnError;
+    NtxCommitTransaction(hxTranscation.Handle).RaiseOnError;
     FormMain.ForceTimerUpdate;
   end;
 end;
@@ -180,7 +180,7 @@ begin
   if TaskMessageDlg('Rollback the transaction?', COMMIT_ROLLBACK_WARNING,
     mtWarning, mbYesNoCancel, -1) = mrYes then
   begin
-    NtxRollbackTransaction(hxTranscation.Value).RaiseOnError;
+    NtxRollbackTransaction(hxTranscation.Handle).RaiseOnError;
     FormMain.ForceTimerUpdate;
   end;
 end;
@@ -193,7 +193,7 @@ begin
   NtxOpenProcess(hxProcess, TFormProcessList.Pick(Self).Process.ProcessId,
     PROCESS_DUP_HANDLE).RaiseOnError;
 
-  NtxDuplicateObjectTo(hxProcess.Value, hxTranscation.Value,
+  NtxDuplicateObjectTo(hxProcess.Handle, hxTranscation.Handle,
     hNewHandle).RaiseOnError;
 
   FormMain.ForceTimerUpdate;;
@@ -226,7 +226,7 @@ begin
     NtxOpenProcess(hxProcess, Item.Data.UniqueProcessId, PROCESS_DUP_HANDLE).
       RaiseOnError;
 
-    NtxCloseRemoteHandle(hxProcess.Value, Item.Data.HandleValue).RaiseOnError;
+    NtxCloseRemoteHandle(hxProcess.Handle, Item.Data.HandleValue).RaiseOnError;
     FormMain.ForceTimerUpdate;;
   end;
 end;
@@ -268,11 +268,11 @@ begin
   // Query static info about the transaction
   lvInfo.Items.BeginUpdate;
   begin
-    if NtxTransaction.Query<TTransactionBasicInformation>(hxTranscation.Value,
+    if NtxTransaction.Query<TTransactionBasicInformation>(hxTranscation.Handle,
       TransactionBasicInformation, TrInfo).IsSuccess then
       lvInfo.Items[0].Cell[1] := TrInfo.TransactionId.ToString;
 
-    lvInfo.Items[3].Cell[1] := IntToHexEx(hxTranscation.Value);
+    lvInfo.Items[3].Cell[1] := IntToHexEx(hxTranscation.Handle);
   end;
   lvInfo.Items.EndUpdate;
 
@@ -299,7 +299,7 @@ procedure TFormTmTxInfo.UpdateBasicInfo;
 var
   Info: TObjectBasicInformaion;
 begin
-  if NtxQueryBasicInfoObject(hxTranscation.Value, Info).IsSuccess then
+  if NtxQueryBasicInfoObject(hxTranscation.Handle, Info).IsSuccess then
   begin
     lvInfo.Items[4].Cell[1] := FormatAccessPrefixed(Info.GrantedAccess,
       @TmTxAccessType);
@@ -313,7 +313,7 @@ procedure TFormTmTxInfo.UpdateProperties;
 var
   Props: TTransactionProperties;
 begin
-  if NtxQueryPropertiesTransaction(hxTranscation.Value, Props).IsSuccess then
+  if NtxQueryPropertiesTransaction(hxTranscation.Handle, Props).IsSuccess then
   begin
     lvInfo.Items[1].Cell[1] := Props.Description;
     lvInfo.Items[2].Cell[1] := PrettifyCamelCaseEnum(
