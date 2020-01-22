@@ -17,7 +17,7 @@ uses
   Winapi.WinNt in 'NtUtils\Headers\Winapi.WinNt.pas';
 
 var
-  hTransaction: THandle = 0;
+  FutureTransaction: THandle;
 
 {$IFDEF Debug}
 function ReportState(Reason: Integer): NTSTATUS;
@@ -60,27 +60,14 @@ end;
 
 procedure DllMain(Reason: Integer);
 begin
-  if (Reason = DLL_THREAD_ATTACH) and (hTransaction <> 0) then
-    RtlSetCurrentTransaction(hTransaction);
+  if (Reason = DLL_THREAD_ATTACH) and (FutureTransaction <> 0) then
+    RtlSetCurrentTransaction(FutureTransaction);
 
   {$IFDEF Debug} ReportState(Reason); {$ENDIF}
 end;
 
-function SetFutureTranasction(TransactionHandle: THandle): NTSTATUS; stdcall;
-begin
-  hTransaction := TransactionHandle;
-  Result := STATUS_SUCCESS;
-
-  {$IFDEF Debug} OutputDebugStringW('Setting future transaction'); {$ENDIF}
-end;
-
-function GetFutureTranasction(Reserved: NativeUInt): THandle; stdcall;
-begin
-  Result := hTransaction;
-end;
-
 exports
-  SetFutureTranasction, GetFutureTranasction;
+  FutureTransaction, DllMain;
 
 begin
   DllProc := DllMain;
