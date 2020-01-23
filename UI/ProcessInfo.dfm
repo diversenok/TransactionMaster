@@ -5,6 +5,8 @@ object FormProcessInfo: TFormProcessInfo
   ClientHeight = 342
   ClientWidth = 376
   Color = clBtnFace
+  Constraints.MinHeight = 300
+  Constraints.MinWidth = 350
   DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -51,8 +53,8 @@ object FormProcessInfo: TFormProcessInfo
             Width = 70
           end
           item
+            AutoSize = True
             Caption = 'Created'
-            Width = 140
           end
           item
             Alignment = taCenter
@@ -105,6 +107,7 @@ object FormProcessInfo: TFormProcessInfo
           Top = 20
           Width = 75
           Height = 25
+          Anchors = [akTop, akRight]
           Caption = 'Set'
           DropDownMenu = popupFuture
           Enabled = False
@@ -130,8 +133,8 @@ object FormProcessInfo: TFormProcessInfo
             Width = 60
           end
           item
+            AutoSize = True
             Caption = 'Access'
-            Width = 120
           end
           item
             Caption = 'Description'

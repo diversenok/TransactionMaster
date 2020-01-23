@@ -5,6 +5,8 @@ object FormMain: TFormMain
   ClientHeight = 392
   ClientWidth = 547
   Color = clBtnFace
+  Constraints.MinHeight = 380
+  Constraints.MinWidth = 500
   DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -43,8 +45,8 @@ object FormMain: TFormMain
         Width = 260
       end
       item
+        AutoSize = True
         Caption = 'Description'
-        Width = 180
       end
       item
         Alignment = taCenter
@@ -91,8 +93,8 @@ object FormMain: TFormMain
         Width = 70
       end
       item
+        AutoSize = True
         Caption = 'Access mask'
-        Width = 150
       end>
     GridLines = True
     ReadOnly = True

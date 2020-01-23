@@ -5,6 +5,8 @@ object FormTmTxInfo: TFormTmTxInfo
   ClientHeight = 314
   ClientWidth = 398
   Color = clBtnFace
+  Constraints.MinHeight = 330
+  Constraints.MinWidth = 350
   DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText

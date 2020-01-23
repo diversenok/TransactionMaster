@@ -6,6 +6,8 @@ object FormProcessList: TFormProcessList
   ClientHeight = 348
   ClientWidth = 333
   Color = clBtnFace
+  Constraints.MinHeight = 300
+  Constraints.MinWidth = 340
   DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
