@@ -133,7 +133,7 @@ function TFormTransact.OpenExistingProcess(out hxProcess: IHandle): TNtxStatus;
 var
   AccessMask: TAccessMask;
 begin
-  AccessMask := PROCESS_SET_PROCESS_TRANSACTION;
+  AccessMask := PROCESS_SET_PROCESS_TRANSACTION or PROCESS_DUP_HANDLE;
 
   if cbThreadsFuture.Checked then
     AccessMask := AccessMask or PROCESS_INJECT_DLL or
