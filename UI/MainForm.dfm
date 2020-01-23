@@ -112,6 +112,7 @@ object FormMain: TFormMain
     Anchors = [akTop, akRight]
     Caption = 'Transact a process...'
     TabOrder = 3
+    OnClick = btnTransactClick
   end
   object appEvents: TApplicationEvents
     OnException = appEventsException

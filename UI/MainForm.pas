@@ -26,6 +26,7 @@ type
     procedure lvActiveTmTxDblClick(Sender: TObject);
     procedure lvHandlesDblClick(Sender: TObject);
     procedure timerUpdateTick(Sender: TObject);
+    procedure btnTransactClick(Sender: TObject);
   private
     ActiveTransctions: THysteresisList<TGuid>;
     Consumers: THysteresisList<TSystemHandleEntry>;
@@ -65,7 +66,7 @@ implementation
 uses
   Ntapi.nttmapi, NtUiLib.Exceptions, NtUtils.Transactions, NtUtils.Objects,
   Ntapi.ntobapi, NtUtils.Access, DelphiUtils.Strings, DelphiUtils.Arrays,
-  NtUtils.Processes, NtUiLib.Icons,
+  NtUtils.Processes, NtUiLib.Icons, ProcessTransact,
   TransactionInfo, ProcessInfo;
 
 {$R *.dfm}
@@ -218,6 +219,11 @@ begin
     NtxCreateTransaction(hxTransaction, Description).RaiseOnError;
     TFormTmTxInfo.CreateDlg(hxTransaction);
   end;
+end;
+
+procedure TFormMain.btnTransactClick(Sender: TObject);
+begin
+  TFormTransact.Create(Self).Show;
 end;
 
 procedure TFormMain.FillTransactionInfo(const Item: TGuid; Index: Integer);

@@ -246,6 +246,10 @@
             <Form>FormProcessInfo</Form>
         </DCCReference>
         <DCCReference Include="TmTxTrackerUtils.pas"/>
+        <DCCReference Include="UI\ProcessTransact.pas">
+            <Form>FormTransact</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <RcCompile Include="NtUtils\NtUtils.ErrorMsg.rc">
             <Form>NtUtils.ErrorMsg.res</Form>
         </RcCompile>

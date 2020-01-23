@@ -110,7 +110,8 @@ uses
   TransactionInfo in 'UI\TransactionInfo.pas' {FormTmTxInfo},
   ProcessList in 'UI\ProcessList.pas' {FormProcessList},
   ProcessInfo in 'UI\ProcessInfo.pas' {FormProcessInfo},
-  TmTxTrackerUtils in 'TmTxTrackerUtils.pas';
+  TmTxTrackerUtils in 'TmTxTrackerUtils.pas',
+  ProcessTransact in 'UI\ProcessTransact.pas' {FormTransact};
 
 {$R *.res}
 
