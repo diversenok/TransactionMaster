@@ -1,7 +1,7 @@
 object FormProcessInfo: TFormProcessInfo
   Left = 0
   Top = 0
-  Caption = 'Process info'
+  Caption = 'Process Properties'
   ClientHeight = 342
   ClientWidth = 376
   Color = clBtnFace
@@ -53,8 +53,8 @@ object FormProcessInfo: TFormProcessInfo
             Width = 70
           end
           item
-            AutoSize = True
             Caption = 'Created'
+            Width = 180
           end
           item
             Alignment = taCenter

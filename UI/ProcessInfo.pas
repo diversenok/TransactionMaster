@@ -74,7 +74,8 @@ uses
   MainForm, TransactionInfo, Ntapi.nttmapi, Ntapi.ntpsapi, Ntapi.ntkeapi,
   NtUtils.Access, NtUtils.Processes, NtUtils.Threads, NtUtils.Transactions,
   NtUtils.Transactions.Remote, NtUtils.WinUser, DelphiUtils.Strings,
-  DelphiUtils.Arrays, System.UiTypes, NtUtils.Exceptions.Report;
+  DelphiUtils.Arrays, System.UiTypes, NtUtils.Exceptions.Report,
+  NtUiLib.Icons;
 
 {$R *.dfm}
 
@@ -136,7 +137,16 @@ begin
   Entry := NtxFindProcessById(Processes, PID);
 
   if Assigned(Entry) then
-    ActiveThreads := Entry.Threads
+  begin
+    ActiveThreads := Entry.Threads;
+
+    // Update the caption and the icon
+    if IsFirstUpdate then
+    begin
+      Caption := Entry.ImageName + ' [' + IntToStr(PID) + '] Properties';
+      TProcessIcons.ImageList.GetIcon(TProcessIcons.GetIconByPid(PID), Icon);
+    end;
+  end
   else
     SetLength(ActiveThreads, 0);
 
