@@ -192,6 +192,10 @@ object FormProcessInfo: TFormProcessInfo
       ShortCut = 13
       OnClick = cmHandleInspect
     end
+    object cmSendTo: TMenuItem
+      Caption = 'Send to...'
+      OnClick = cmSendToClick
+    end
     object cmCloseHandle: TMenuItem
       Caption = 'Close handle'
       ShortCut = 46

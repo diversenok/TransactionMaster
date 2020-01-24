@@ -21,6 +21,7 @@ type
     cmInspect: TMenuItem;
     cmRefreshFuture: TMenuItem;
     cmResume: TMenuItem;
+    cmSendTo: TMenuItem;
     cmSeparator: TMenuItem;
     cmSuspend: TMenuItem;
     gbTracking: TGroupBox;
@@ -42,6 +43,7 @@ type
     procedure cmHandleInspect(Sender: TObject);
     procedure cmRefreshFutureClick(Sender: TObject);
     procedure cmResumeClick(Sender: TObject);
+    procedure cmSendToClick(Sender: TObject);
     procedure cmSuspendClick(Sender: TObject);
     procedure FormKeyPress(Sender: TObject; var Key: Char);
   private
@@ -75,7 +77,7 @@ uses
   NtUtils.Access, NtUtils.Processes, NtUtils.Threads, NtUtils.Transactions,
   NtUtils.Transactions.Remote, NtUtils.WinUser, DelphiUtils.Strings,
   DelphiUtils.Arrays, System.UiTypes, NtUtils.Exceptions.Report,
-  NtUiLib.Icons;
+  NtUiLib.Icons, ProcessList;
 
 {$R *.dfm}
 
@@ -453,6 +455,31 @@ begin
 
       NtxResumeThread(hxThread.Handle).RaiseOnError;
     end;
+end;
+
+procedure TFormProcessInfo.cmSendToClick(Sender: TObject);
+var
+  TargetPID: NativeUInt;
+  hxSource, hxTarget: IHandle;
+  NewTargetHandle: THandle;
+begin
+  if not Assigned(lvHandles.Selected) then
+    Exit;
+
+  // Open source process
+  NtxOpenProcess(hxSource, PID, PROCESS_DUP_HANDLE).RaiseOnError;
+
+  // Pick and open the target process
+  TargetPID := TFormProcessList.Pick(FormMain).Process.ProcessId;
+  NtxOpenProcess(hxTarget, TargetPID, PROCESS_DUP_HANDLE).RaiseOnError;
+
+  // Send the handle
+  NtxDuplicateObject(hxSource.Handle, Transactions[lvHandles.Selected.Index].
+    Data.HandleValue, hxTarget.Handle, NewTargetHandle, 0, 0,
+    DUPLICATE_SAME_ACCESS).RaiseOnError;
+
+  // Show info
+  TFormProcessInfo.CreateDlg(TargetPID);
 end;
 
 procedure TFormProcessInfo.cmSuspendClick(Sender: TObject);
