@@ -62,7 +62,7 @@ uses
 
 const
   COMMIT_ROLLBACK_WARNING = 'Commiting or rolling back a transaction ' +
-    'invalidates all file handles opened for this transaction. Programs that' +
+    'invalidates all file handles opened for this transaction. Programs that ' +
     'use this transaction might misbehave. Continue anyway?';
 
 procedure TFormTmTxInfo.AtConsumerAddFinish(const Item: TSystemHandleEntry;

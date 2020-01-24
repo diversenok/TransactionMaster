@@ -59,14 +59,16 @@ var
   hxProcess, hxThread, hxTransaction: IHandle;
   Result: TNtxStatus;
 begin
-  // Create a transaction
-  NtxCreateTransaction(hxTransaction, tbDescription.Text).RaiseOnError;
-
+  // Create/open the process
   if Pages.ActivePage = tabNewProcess then
     CreateSuspendedProcess(hxProcess, hxThread).RaiseOnError
   else
     OpenExistingProcess(hxProcess).RaiseOnError;
 
+  // Create a transaction
+  NtxCreateTransaction(hxTransaction, tbDescription.Text).RaiseOnError;
+
+  // Force the process into the transaction
   Result := TransactProcess(hxProcess.Handle, hxTransaction.Handle);
 
   if Pages.ActivePage = tabNewProcess then
