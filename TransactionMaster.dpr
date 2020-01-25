@@ -1,5 +1,7 @@
 program TransactionMaster;
 
+{$WEAKLINKRTTI ON}
+
 uses
   Vcl.Forms,
   Ntapi.ntdbg in 'NtUtils\Headers\Ntapi.ntdbg.pas',
