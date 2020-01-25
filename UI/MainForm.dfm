@@ -29,9 +29,9 @@ object FormMain: TFormMain
   object lblProcesses: TLabel
     Left = 8
     Top = 204
-    Width = 162
+    Width = 157
     Height = 13
-    Caption = 'Processess that use transactions:'
+    Caption = 'Processes that use transactions:'
   end
   object lvActiveTmTx: TListViewEx
     Left = 8
