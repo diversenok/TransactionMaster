@@ -37,8 +37,8 @@ function SetFutureTransaction(hProcess: THandle; Instance: TTmTxTracker;
 implementation
 
 uses
-  System.SysUtils, Ntapi.ntstatus, NtUtils.Sections, NtUtils.ImageHlp,
-  NtUtils.Files, NtUtils.Processes, NtUtils.Processes.Memory;
+  System.SysUtils, Ntapi.ntstatus, Ntapi.ntpebteb, NtUtils.Sections,
+  NtUtils.ImageHlp, NtUtils.Files, NtUtils.Processes, NtUtils.Processes.Memory;
 
 type
   TTrackerDll = record
@@ -54,13 +54,8 @@ var
 
 function IsX86(WoW64: Boolean): Boolean;
 begin
-  {$IFDEF Win32}
-  // If we run on 32-bit Windows, use the 32 bit DLL
-  if not RtlIsWoW64 then
-    Result := True;
-  {$ELSE}
-  Result := WoW64;
-  {$ENDIF}
+  // If we run natively on 32-bit Windows, always use the 32 bit DLL
+  Result := {$IFDEF Win32}not RtlIsWoW64 or{$ENDIF} WoW64;
 end;
 
 function GetDllInfo(WoW64: Boolean): PTrackerDll;
@@ -110,7 +105,7 @@ begin
 
   pEntry := RtlxFindExportedName(Entries, TRACKER_VAR);
 
-  if Assigned(pEntry) and pEntry.ValidAddress then
+  if Assigned(pEntry) and not pEntry.Forwards then
   begin
     Info.HandleVA := pEntry.VirtualAddress;
     Info.Status.Status := STATUS_SUCCESS;
