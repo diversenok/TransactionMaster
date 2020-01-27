@@ -28,16 +28,16 @@ object FormMain: TFormMain
   end
   object lblProcesses: TLabel
     Left = 8
-    Top = 204
+    Top = 188
     Width = 157
     Height = 13
     Caption = 'Processes that use transactions:'
   end
   object lvActiveTmTx: TListViewEx
     Left = 8
-    Top = 40
+    Top = 43
     Width = 530
-    Height = 150
+    Height = 134
     Anchors = [akLeft, akTop, akRight]
     Columns = <
       item
@@ -75,9 +75,9 @@ object FormMain: TFormMain
   end
   object lvHandles: TListViewEx
     Left = 8
-    Top = 232
+    Top = 214
     Width = 530
-    Height = 152
+    Height = 170
     Anchors = [akLeft, akTop, akRight, akBottom]
     Columns = <
       item
@@ -108,7 +108,7 @@ object FormMain: TFormMain
   end
   object btnTransact: TButton
     Left = 408
-    Top = 199
+    Top = 183
     Width = 131
     Height = 25
     Anchors = [akTop, akRight]

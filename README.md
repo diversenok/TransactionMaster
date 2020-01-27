@@ -2,14 +2,14 @@
 
 **Transaction Master** is an experimental tool for Windows that allows you to switch other processes into the context of an NTFS transaction. A **transaction** is a Windows kernel object that encapsulates a set of operations (in this case — file-system operations) into a single entity. This entity provides isolation, which means that changes made within a transaction are not visible to the rest of the system, and atomicity, which means the owner can **commit** (make permanent) or **rollback** it as a whole. The last part also allows the system to maintain consistency. For more information see [ACID](https://en.wikipedia.org/wiki/ACID) and [TxF](https://en.wikipedia.org/wiki/TxF).
 
-![](https://habrastorage.org/webt/cv/as/aj/cvasaj5uxqtwnt3w6v-xrxjrxuy.png)
+![Overview screenshot](https://habrastorage.org/webt/p0/-s/fi/p0-sfitxnzzpywfqxuc4arx1fps.png)
 
 ## How it works
 
 To understand the program's capabilities and limitations, you can consult with my article:
 
-- In English: [“How to make any process work with transactional NTFS: my first step to writing a sandbox for Windows.”](https://TODO)
-- In Russian: [«Заставляем любой процесс работать с транзакционной NTFS: мой первый шаг к созданию песочницы для Windows.»](https://TODO)
+- In English: [How to Make Any Process Work With Transactional NTFS: My First Step to Writing a Sandbox for Windows](https://habr.com/en/post/485788/).
+- In Russian: [Заставляем любой процесс работать с транзакционной NTFS: мой первый шаг к созданию песочницы для Windows](https://habr.com/ru/post/485784/).
 
 ## Downloads
 
@@ -24,7 +24,7 @@ Key        | Value
 Author     | © diversenok
 Email      | diversenok@gmail.com (English and Russian are suitable)
 Compiled   | Embarcadero Delphi 10.3
-Version    | 1.25.0.0
+Version    | 1.1.25.0
 Date       | Jan 25, 2020
 
 ------------------------------------------------------------------------------
