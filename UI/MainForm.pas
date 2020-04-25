@@ -5,9 +5,9 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons, Vcl.Graphics,
-  NtUtils.Exceptions, Vcl.ComCtrls, VclEx.ListView, Vcl.AppEvnts, Vcl.ExtCtrls,
-  NtUiLib.HysteresisList, NtUtils.Objects.Snapshots, DelphiUtils.Events,
-  NtUtils.Processes.Snapshots;
+  Vcl.ComCtrls, VclEx.ListView, Vcl.AppEvnts, Vcl.ExtCtrls,
+  DelphiUiLib.HysteresisList, DelphiUtils.Events,
+  NtUtils.Objects.Snapshots, NtUtils.Processes.Snapshots;
 
 type
   TFormMain = class(TForm)
@@ -30,7 +30,7 @@ type
   private
     ActiveTransctions: THysteresisList<TGuid>;
     Consumers: THysteresisList<TSystemHandleEntry>;
-    TmTxTypeIndex: NativeUInt;
+    TmTxTypeIndex: Word;
     IsFirstUpdate: Boolean;
     FOnHandleSnapshotting: TEvent<TArray<TSystemHandleEntry>>;
     FOnTmTxEnumeration: TEvent<TArray<TGuid>>;
@@ -64,10 +64,10 @@ function CompareHandleEntries(const A, B: TSystemHandleEntry): Boolean;
 implementation
 
 uses
-  Ntapi.nttmapi, NtUiLib.Exceptions, NtUtils.Transactions, NtUtils.Objects,
-  Ntapi.ntobapi, NtUtils.Access, DelphiUtils.Strings, DelphiUtils.Arrays,
-  NtUtils.Processes, NtUiLib.Icons, ProcessTransact,
-  TransactionInfo, ProcessInfo;
+  Ntapi.nttmapi, NtUtils, NtUiLib.Exceptions, NtUtils.Transactions,
+  NtUtils.Objects, NtUiLib.AccessMasks, DelphiUiLib.Strings, DelphiUtils.Arrays,
+  NtUiLib.Icons, ProcessTransact, NtUiLib.Exceptions.Dialog,
+  TransactionInfo, ProcessInfo, NtUtils.Processes.Query, NtUtils.Files;
 
 {$R *.dfm}
 
@@ -173,7 +173,10 @@ begin
     if hdAddStart in Consumers[i].BelongsToDelta then
     begin
       Entry := NtxFindProcessById(Processes, Consumers[i].Data.UniqueProcessId);
-      FileName := NtxTryQueryImageProcessById(Consumers[i].Data.UniqueProcessId);
+
+      if NtxQueryImageNameProcessId(Consumers[i].Data.UniqueProcessId,
+        FileName).IsSuccess then
+        FileName := RtlxNtPathToDosPathUnsafe(FileName);
 
       if Assigned(Entry) then
         lvHandles.Items[i].Cell[0] := Entry.ImageName
@@ -244,7 +247,7 @@ begin
         Cell[1] := Properties.Description;
 
       // Get handle count (excluding ours)
-      if  NtxQueryBasicInfoObject(hxTransaction.Handle, Info).IsSuccess then
+      if  NtxQueryBasicObject(hxTransaction.Handle, Info).IsSuccess then
         Cell[2] := IntToStr(Info.HandleCount - 1);
     end;
 end;
@@ -346,7 +349,7 @@ begin
     // Snapshot active transactions
     if OnTmTxEnumeration.Count > 0 then
     begin
-      if not NtxEnumerateTransactions(Guids).IsSuccess then
+      if not NtxEnumerateKtmObjects(KTMOBJECT_TRANSACTION, Guids).IsSuccess then
         SetLength(Guids, 0);
 
       OnTmTxEnumeration.Invoke(Guids);
@@ -359,8 +362,8 @@ begin
         SetLength(Handles, 0);
 
       // Filter transactions only
-      TArrayHelper.Filter<TSystemHandleEntry>(Handles, FilterByType,
-        TmTxTypeIndex);
+      TArrayHelper.Filter<TSystemHandleEntry>(Handles,
+        ByTypeIndex(TmTxTypeIndex));
 
       OnHandleSnapshotting.Invoke(Handles);
     end;

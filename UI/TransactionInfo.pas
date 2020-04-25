@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls,
   Vcl.Menus, Vcl.ExtCtrls, Vcl.Graphics, VclEx.ListView, NtUtils.Objects,
-  NtUtils.Objects.Snapshots, NtUiLib.HysteresisList,
+  NtUtils.Objects.Snapshots, DelphiUiLib.HysteresisList, NtUtils,
   NtUtils.Processes.Snapshots;
 
 type
@@ -53,10 +53,10 @@ type
 implementation
 
 uses
-  NtUtils.Transactions, Ntapi.nttmapi, Ntapi.ntobapi, NtUtils.Access,
-  DelphiUtils.Strings, NtUtils.Exceptions,
-  System.UITypes, NtUiLib.Icons, NtUtils.Processes, Ntapi.ntpsapi,
-  ProcessList, MainForm, ProcessInfo;
+  NtUtils.Transactions, Ntapi.nttmapi, NtUiLib.AccessMasks,
+  DelphiUiLib.Strings, NtUiLib.Exceptions, NtUtils.Processes.Query,
+  NtUiLib.Icons, NtUtils.Processes, Ntapi.ntpsapi, NtUtils.Files,
+  ProcessList, MainForm, ProcessInfo, System.UITypes;
 
 {$R *.dfm}
 
@@ -139,7 +139,10 @@ begin
     if hdAddStart in Consumers[i].BelongsToDelta then
     begin
       Entry := NtxFindProcessById(Processes, Consumers[i].Data.UniqueProcessId);
-      FileName := NtxTryQueryImageProcessById(Consumers[i].Data.UniqueProcessId);
+
+      if NtxQueryImageNameProcessId(Consumers[i].Data.UniqueProcessId,
+        FileName).IsSuccess then
+        FileName := RtlxNtPathToDosPathUnsafe(FileName);
 
       if Assigned(Entry) then
         lvConsumers.Items[i].Cell[0] := Entry.ImageName
@@ -190,10 +193,10 @@ var
   hxProcess: IHandle;
   hNewHandle: THandle;
 begin
-  NtxOpenProcess(hxProcess, TFormProcessList.Pick(Self).Process.ProcessId,
+  NtxOpenProcess(hxProcess, TFormProcessList.Pick(Self).Basic.ProcessId,
     PROCESS_DUP_HANDLE).RaiseOnError;
 
-  NtxDuplicateObjectTo(hxProcess.Handle, hxTranscation.Handle,
+  NtxDuplicateHandleTo(hxProcess.Handle, hxTranscation.Handle,
     hNewHandle).RaiseOnError;
 
   FormMain.ForceTimerUpdate;;
@@ -299,7 +302,7 @@ procedure TFormTmTxInfo.UpdateBasicInfo;
 var
   Info: TObjectBasicInformaion;
 begin
-  if NtxQueryBasicInfoObject(hxTranscation.Handle, Info).IsSuccess then
+  if NtxQueryBasicObject(hxTranscation.Handle, Info).IsSuccess then
   begin
     lvInfo.Items[4].Cell[1] := FormatAccessPrefixed(Info.GrantedAccess,
       @TmTxAccessType);

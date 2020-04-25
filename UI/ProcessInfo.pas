@@ -5,9 +5,9 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
-  Vcl.ComCtrls, VclEx.ListView, Vcl.Menus, NtUiLib.HysteresisList,
+  Vcl.ComCtrls, VclEx.ListView, Vcl.Menus, DelphiUiLib.HysteresisList,
   NtUtils.Objects.Snapshots, NtUtils.Objects, NtUtils.Processes.Snapshots,
-  NtUtils.Exceptions, TmTxTrackerUtils;
+  NtUtils, TmTxTrackerUtils;
 
 type
   TFormProcessInfo = class(TForm)
@@ -52,16 +52,16 @@ type
     TmTxTracker: TTmTxTracker;
     hxThreads: TArray<IHandle>;
     Transactions: THysteresisList<TSystemHandleEntry>;
-    Threads: THysteresisList<TSystemThreadInformation>;
+    Threads: THysteresisList<TThreadEntry>;
     IsFirstUpdate: Boolean;
     procedure AtTmTxAddStart(const Item: TSystemHandleEntry; Index: Integer);
     procedure AtTmTxAddFinish(const Item: TSystemHandleEntry; Index: Integer);
     procedure AtTmTxRemoveStart(const Item: TSystemHandleEntry; Index: Integer);
     procedure AtTmTxRemoveFinish(const Item: TSystemHandleEntry; Index: Integer);
-    procedure AtThreadAddStart(const Item: TSystemThreadInformation; Index: Integer);
-    procedure AtThreadAddFinish(const Item: TSystemThreadInformation; Index: Integer);
-    procedure AtThreadRemoveStart(const Item: TSystemThreadInformation; Index: Integer);
-    procedure AtThreadRemoveFinish(const Item: TSystemThreadInformation; Index: Integer);
+    procedure AtThreadAddStart(const Item: TThreadEntry; Index: Integer);
+    procedure AtThreadAddFinish(const Item: TThreadEntry; Index: Integer);
+    procedure AtThreadRemoveStart(const Item: TThreadEntry; Index: Integer);
+    procedure AtThreadRemoveFinish(const Item: TThreadEntry; Index: Integer);
     procedure AtHandleSnapshot(const Handles: TArray<TSystemHandleEntry>);
     procedure AtProcessSnapshot(const Processes: TArray<TProcessEntry>);
     procedure AtShutdown(const Sender: TObject);
@@ -74,18 +74,18 @@ implementation
 
 uses
   MainForm, TransactionInfo, Ntapi.nttmapi, Ntapi.ntpsapi, Ntapi.ntkeapi,
-  NtUtils.Access, NtUtils.Processes, NtUtils.Threads, NtUtils.Transactions,
-  NtUtils.Transactions.Remote, NtUtils.WinUser, DelphiUtils.Strings,
-  DelphiUtils.Arrays, System.UiTypes, NtUtils.Exceptions.Report,
-  NtUiLib.Icons, ProcessList;
+  NtUiLib.AccessMasks, NtUtils.Processes, NtUtils.Threads, NtUtils.Transactions,
+  NtUtils.Transactions.Remote, NtUtils.WinUser, DelphiUiLib.Strings,
+  DelphiUtils.Arrays, NtUiLib.Exceptions.Report, System.UITypes,
+  NtUiLib.Icons, ProcessList, Winapi.WinNt, NtUiLib.Exceptions;
 
 {$R *.dfm}
 
-function CompareThreadEntries(const A, B: TSystemThreadInformation): Boolean;
+function CompareThreadEntries(const A, B: TThreadEntry): Boolean;
 begin
   // Thread IDs might be reused, compare creation time as well
-  Result := (A.ClientId.UniqueThread = B.ClientId.UniqueThread) and
-    (A.CreateTime.QuadPart = B.CreateTime.QuadPart);
+  Result := (A.Basic.ClientId.UniqueThread = B.Basic.ClientId.UniqueThread) and
+    (A.Basic.CreateTime = B.Basic.CreateTime);
 end;
 
 procedure TFormProcessInfo.AtHandleSnapshot(
@@ -98,8 +98,7 @@ var
 begin
   // We are interested only in one process
   FilteredHandles := Copy(Handles, Low(Handles), Length(Handles));
-  TArrayHelper.Filter<TSystemHandleEntry>(FilteredHandles, FilterByProcess,
-    PID);
+  TArrayHelper.Filter<TSystemHandleEntry>(FilteredHandles, ByProcess(PID));
 
   lvHandles.Items.BeginUpdate;
   begin
@@ -111,7 +110,7 @@ begin
       hxProcess, PID, PROCESS_DUP_HANDLE).IsSuccess then
       for i := 0 to Transactions.Count - 1 do
         if (hdAddStart in Transactions[i].BelongsToDelta) and
-          NtxDuplicateObjectFrom(hxProcess.Handle,
+          NtxDuplicateHandleFrom(hxProcess.Handle,
           Transactions[i].Data.HandleValue, hxTransaction).IsSuccess and
           NtxQueryPropertiesTransaction(hxTransaction.Handle,
           Properties).IsSuccess then
@@ -132,7 +131,7 @@ procedure TFormProcessInfo.AtProcessSnapshot(
   const Processes: TArray<TProcessEntry>);
 var
   Entry: PProcessEntry;
-  ActiveThreads: TArray<TSystemThreadInformation>;
+  ActiveThreads: TArray<TThreadEntry>;
   HandleValue: NativeUInt;
   i: Integer;
 begin
@@ -161,9 +160,9 @@ begin
      if (Threads[i].State = hisExisting) or (IsFirstUpdate and
       (Threads[i].State = hisNew)) then
      begin
-       if Threads[i].Data.WaitReason = Suspended then
+       if Threads[i].Data.Basic.WaitReason = Suspended then
          lvThreads.Items[i].Color := $AAAAAA // Suspended threads are gray
-       else if UsrxIsGuiThread(Threads[i].Data.ClientId.UniqueThread) then
+       else if UsrxIsGuiThread(Threads[i].Data.Basic.ClientId.UniqueThread) then
          lvThreads.Items[i].Color := $77FFFF // GUI threads are yellow
        else
          lvThreads.Items[i].ColorEnabled := False;
@@ -195,23 +194,23 @@ begin
 end;
 
 procedure TFormProcessInfo.AtThreadAddFinish(
-  const Item: TSystemThreadInformation; Index: Integer);
+  const Item: TThreadEntry; Index: Integer);
 begin
   lvThreads.Items[Index].ColorEnabled := False;
 end;
 
 procedure TFormProcessInfo.AtThreadAddStart(
-  const Item: TSystemThreadInformation; Index: Integer);
+  const Item: TThreadEntry; Index: Integer);
 begin
   with lvThreads.Items.Add do
   begin
-    Cell[0] := IntToStr(Item.ClientId.UniqueThread);
-    Cell[1] := DateTimeToStr(Item.CreateTime.ToDateTime);
+    Cell[0] := IntToStr(Item.Basic.ClientId.UniqueThread);
+    Cell[1] := DateTimeToStr(LargeIntegerToDateTime(Item.Basic.CreateTime));
     Cell[2] := 'Unknown';
 
     // Obtain a handle for the thread for future use to query transactions
     SetLength(hxThreads, Length(hxThreads) + 1);
-    NtxOpenThread(hxThreads[High(hxThreads)], Item.ClientId.UniqueThread,
+    NtxOpenThread(hxThreads[High(hxThreads)], Item.Basic.ClientId.UniqueThread,
       THREAD_QUERY_LIMITED_INFORMATION);
 
     if not IsFirstUpdate then
@@ -220,14 +219,14 @@ begin
 end;
 
 procedure TFormProcessInfo.AtThreadRemoveFinish(
-  const Item: TSystemThreadInformation; Index: Integer);
+  const Item: TThreadEntry; Index: Integer);
 begin
   lvThreads.Items.Delete(Index);
   Delete(hxThreads, Index, 1);
 end;
 
 procedure TFormProcessInfo.AtThreadRemoveStart(
-  const Item: TSystemThreadInformation; Index: Integer);
+  const Item: TThreadEntry; Index: Integer);
 begin
   lvThreads.Items[Index].Selected := False;
   lvThreads.Items[Index].Color := clRed;
@@ -301,7 +300,7 @@ begin
     begin
       // Inject it
       NtxOpenProcess(hxProcess, PID, PROCESS_INJECT_DLL).RaiseOnError;
-      InjectTmTxTracker(hxProcess.Handle).RaiseOnError;
+      InjectTmTxTracker(hxProcess).RaiseOnError;
 
       // Find its address
       FindTmTxTrackerDll.RaiseOnError;
@@ -347,7 +346,7 @@ begin
       // TODO: Add abort-continue buttons to the error messages
 
       // Open the target thread
-      NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
+      NtxOpenThread(hxThread, Threads[i].Data.Basic.ClientId.UniqueThread,
         THREAD_SET_TRANSACTION or THREAD_SUSPEND_RESUME).RaiseOnError;
 
       // Suspend it to prevent race conditions
@@ -389,7 +388,7 @@ begin
 
   // TODO: Duplicate with maximum allowed access
   NtxOpenProcess(hxProcess, PID, PROCESS_DUP_HANDLE).RaiseOnError;
-  NtxDuplicateObjectFrom(hxProcess.Handle, Transactions[lvHandles.Selected.
+  NtxDuplicateHandleFrom(hxProcess.Handle, Transactions[lvHandles.Selected.
     Index].Data.HandleValue, hxTransaction).RaiseOnError;
 
   TFormTmTxInfo.CreateDlg(hxTransaction);
@@ -450,7 +449,7 @@ begin
   for i := 0 to Threads.Count - 1 do
     if lvThreads.Items[i].Selected and (Threads[i].State <> hisDeleted) then
     begin
-      NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
+      NtxOpenThread(hxThread, Threads[i].Data.Basic.ClientId.UniqueThread,
         THREAD_SUSPEND_RESUME).RaiseOnError;
 
       NtxResumeThread(hxThread.Handle).RaiseOnError;
@@ -470,11 +469,11 @@ begin
   NtxOpenProcess(hxSource, PID, PROCESS_DUP_HANDLE).RaiseOnError;
 
   // Pick and open the target process
-  TargetPID := TFormProcessList.Pick(FormMain).Process.ProcessId;
+  TargetPID := TFormProcessList.Pick(FormMain).Basic.ProcessId;
   NtxOpenProcess(hxTarget, TargetPID, PROCESS_DUP_HANDLE).RaiseOnError;
 
   // Send the handle
-  NtxDuplicateObject(hxSource.Handle, Transactions[lvHandles.Selected.Index].
+  NtxDuplicateHandle(hxSource.Handle, Transactions[lvHandles.Selected.Index].
     Data.HandleValue, hxTarget.Handle, NewTargetHandle, 0, 0,
     DUPLICATE_SAME_ACCESS).RaiseOnError;
 
@@ -490,7 +489,7 @@ begin
   for i := 0 to Threads.Count - 1 do
     if lvThreads.Items[i].Selected and (Threads[i].State <> hisDeleted) then
     begin
-      NtxOpenThread(hxThread, Threads[i].Data.ClientId.UniqueThread,
+      NtxOpenThread(hxThread, Threads[i].Data.Basic.ClientId.UniqueThread,
         THREAD_SUSPEND_RESUME).RaiseOnError;
 
       NtxSuspendThread(hxThread.Handle).RaiseOnError;
@@ -559,8 +558,7 @@ begin
   Transactions.OnRemoveFinish := AtTmTxRemoveFinish;
 
   // Subscribe for thread list changes
-  Threads := THysteresisList<TSystemThreadInformation>.Create(
-    CompareThreadEntries, 3);
+  Threads := THysteresisList<TThreadEntry>.Create(CompareThreadEntries, 3);
   Threads.OnAddStart := AtThreadAddStart;
   Threads.OnAddFinish := AtThreadAddFinish;
   Threads.OnRemoveStart := AtThreadRemoveStart;

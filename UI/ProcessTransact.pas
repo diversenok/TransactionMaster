@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
-  Vcl.ComCtrls, NtUtils.Objects, NtUtils.Exceptions;
+  Vcl.ComCtrls, NtUtils.Objects, NtUtils;
 
 type
   TFormTransact = class(TForm)
@@ -36,7 +36,8 @@ type
     function CreateSuspendedProcess(out hxProcess: IHandle;
       out hxThread: IHandle): TNtxStatus;
     function OpenExistingProcess(out hxProcess: IHandle): TNtxStatus;
-    function TransactProcess(hProcess, hTransaction: THandle): TNtxStatus;
+    function TransactProcess(hxProcess: IHandle; hTransaction: THandle)
+      : TNtxStatus;
   end;
 
 implementation
@@ -44,7 +45,8 @@ implementation
 uses
   ProcessList, ProcessInfo, TmTxTrackerUtils, Winapi.ShlwApi, Winapi.WinNt,
   Ntapi.ntstatus, NtUtils.Processes, NtUiLib.Icons, NtUtils.Transactions.Remote,
-  NtUtils.Exec, NtUtils.Exec.Win32, NtUtils.Transactions, NtUtils.Threads;
+  NtUtils.Exec, NtUtils.Exec.Win32, NtUtils.Transactions, NtUtils.Threads,
+  NtUiLib.Exceptions;
 
 {$R *.dfm}
 
@@ -69,7 +71,7 @@ begin
   NtxCreateTransaction(hxTransaction, tbDescription.Text).RaiseOnError;
 
   // Force the process into the transaction
-  Result := TransactProcess(hxProcess.Handle, hxTransaction.Handle);
+  Result := TransactProcess(hxProcess, hxTransaction.Handle);
 
   if Pages.ActivePage = tabNewProcess then
   begin
@@ -91,7 +93,7 @@ procedure TFormTransact.btnProcessSelectClick(Sender: TObject);
 begin
   with TFormProcessList.Pick(Self) do
   begin
-    PID := Process.ProcessId;
+    PID := Basic.ProcessId;
     tbProcess.Text := ImageName + ' [' + IntToStr(PID) + ']';
     tbProcess.LeftButton.ImageIndex := TProcessIcons.GetIconByPid(PID);
   end;
@@ -144,14 +146,14 @@ begin
   Result := NtxOpenProcess(hxProcess, PID, AccessMask);
 end;
 
-function TFormTransact.TransactProcess(hProcess, hTransaction: THandle):
-  TNtxStatus;
+function TFormTransact.TransactProcess(hxProcess: IHandle;
+  hTransaction: THandle): TNtxStatus;
 var
   hRemoteHandle: THandle;
   TmTxTracker: TTmTxTracker;
 begin
   // Duplicate the handle to the process
-  Result := NtxDuplicateObjectTo(hProcess, hTransaction, hRemoteHandle);
+  Result := NtxDuplicateHandleTo(hxProcess.Handle, hTransaction, hRemoteHandle);
 
   if not Result.IsSuccess then
     Exit;
@@ -160,13 +162,13 @@ begin
   if cbThreadsFuture.Checked then
   begin
     // Inject thread-tracking dll
-    Result := InjectTmTxTracker(hProcess);
+    Result := InjectTmTxTracker(hxProcess);
 
     if not Result.IsSuccess then
       Exit;
 
     // Find its base address
-    Result := FindTmTxTracker(hProcess, TmTxTracker);
+    Result := FindTmTxTracker(hxProcess.Handle, TmTxTracker);
 
     if not Result.IsSuccess then
       Exit;
@@ -179,14 +181,14 @@ begin
     end;
 
     // Notify the dll about future transaction
-    Result := SetFutureTransaction(hProcess, TmTxTracker, hRemoteHandle);
+    Result := SetFutureTransaction(hxProcess.Handle, TmTxTracker, hRemoteHandle);
 
     if not Result.IsSuccess then
       Exit;
   end;
 
   // Set a transaction to existing threads
-  Result := RtlxSetTransactionProcess(hProcess, hRemoteHandle);
+  Result := RtlxSetTransactionProcess(hxProcess.Handle, hRemoteHandle);
 end;
 
 end.

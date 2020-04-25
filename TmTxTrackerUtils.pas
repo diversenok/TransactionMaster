@@ -3,8 +3,8 @@ unit TmTxTrackerUtils;
 interface
 
 uses
-  Winapi.WinNt, Ntapi.ntpsapi, NtUtils.Exceptions, NtUtils.Ldr,
-  NtUtils.Shellcode.Dll, NtUtils.Processes.Modules;
+  Winapi.WinNt, Ntapi.ntpsapi, NtUtils, NtUtils.Shellcode.Dll,
+  NtUtils.Processes.Modules;
 
 const
   PROCESS_ENUMERATE_MODULES = PROCESS_ENUMERATE_MODULES;
@@ -26,7 +26,7 @@ type
 function FindTmTxTracker(hProcess: THandle; out Instance: TTmTxTracker):
   TNtxStatus;
 
-function InjectTmTxTracker(hProcess: THandle): TNtxStatus;
+function InjectTmTxTracker(hxProcess: IHandle): TNtxStatus;
 
 function GetFutureTransaction(hProcess: THandle; Instance: TTmTxTracker;
   out Value: NativeUInt): TNtxStatus;
@@ -37,8 +37,8 @@ function SetFutureTransaction(hProcess: THandle; Instance: TTmTxTracker;
 implementation
 
 uses
-  System.SysUtils, Ntapi.ntstatus, Ntapi.ntpebteb, NtUtils.Sections,
-  NtUtils.ImageHlp, NtUtils.Files, NtUtils.Processes, NtUtils.Processes.Memory;
+  System.SysUtils, Ntapi.ntstatus, NtUtils.Sections, NtUtils.ImageHlp,
+  NtUtils.Files, NtUtils.Processes.Memory, NtUtils.Processes.Query;
 
 type
   TTrackerDll = record
@@ -100,8 +100,8 @@ begin
     Exit(Info.Status);
 
   // Parse export
-  Info.Status := RtlxEnumerateExportImage(MappedMemory.Address,
-    MappedMemory.Size, False, Entries);
+  Info.Status := RtlxEnumerateExportImage(MappedMemory.Data, MappedMemory.Size,
+    False, Entries);
 
   pEntry := RtlxFindExportedName(Entries, TRACKER_VAR);
 
@@ -141,14 +141,14 @@ begin
     end;
 end;
 
-function InjectTmTxTracker(hProcess: THandle): TNtxStatus;
+function InjectTmTxTracker(hxProcess: IHandle): TNtxStatus;
 var
   WoW64: Boolean;
 begin
-  Result := NtxQueryIsWoW64Process(hProcess, WoW64);
+  Result := NtxQueryIsWoW64Process(hxProcess.Handle, WoW64);
 
   if Result.IsSuccess then
-    Result := RtlxInjectDllProcessEx(hProcess, GetDllLocation(WoW64));
+    Result := RtlxInjectDllProcessEx(hxProcess, GetDllLocation(WoW64));
 end;
 
 function GetFutureTransaction(hProcess: THandle; Instance: TTmTxTracker;

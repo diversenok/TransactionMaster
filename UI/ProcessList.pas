@@ -34,7 +34,7 @@ type
 implementation
 
 uses
-  NtUiLib.Icons, NtUtils.Exceptions;
+  NtUiLib.Icons, NtUtils;
 
 {$R *.dfm}
 
@@ -50,9 +50,9 @@ begin
   with lvProcesses.Items.Add do
   begin
     Cell[0] := Node.Entry.ImageName;
-    Cell[1] := IntToStr(Node.Entry.Process.ProcessId);
-    Cell[2] := IntToStr(Node.Entry.Process.SessionId);
-    ImageIndex := TProcessIcons.GetIconByPid(Node.Entry.Process.ProcessId);
+    Cell[1] := IntToStr(Node.Entry.Basic.ProcessId);
+    Cell[2] := IntToStr(Node.Entry.Basic.SessionId);
+    ImageIndex := TProcessIcons.GetIconByPid(Node.Entry.Basic.ProcessId);
     Indent := Level;
     Data := @Node;
   end;
@@ -65,13 +65,17 @@ end;
 procedure TFormProcessList.btnRefreshClick(Sender: TObject);
 var
   i: Integer;
+  Entries: TArray<TProcessEntry>;
 begin
   lvProcesses.Items.BeginUpdate;
   lvProcesses.Items.Clear;
 
   try
-    if not NtxEnumerateProcessesEx(ProcessTree).IsSuccess then
+    if not NtxEnumerateProcesses(Entries).IsSuccess then
       Exit;
+
+    ProcessTree := TArrayHelper.BuildTree<TProcessEntry>(Entries,
+      ParentProcessChecker);
 
     // Add parentless processes and then all other recursively
     for i := 0 to High(ProcessTree) do
