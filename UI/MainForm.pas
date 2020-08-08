@@ -6,11 +6,11 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons, Vcl.Graphics,
   Vcl.ComCtrls, VclEx.ListView, Vcl.AppEvnts, Vcl.ExtCtrls,
-  DelphiUiLib.HysteresisList, DelphiUtils.Events,
+  DelphiUiLib.HysteresisList, DelphiUtils.Events, VclEx.Form,
   NtUtils.Objects.Snapshots, NtUtils.Processes.Snapshots;
 
 type
-  TFormMain = class(TForm)
+  TFormMain = class(TFormEx)
     appEvents: TApplicationEvents;
     btnNewTmTx: TButton;
     btnTransact: TButton;
@@ -66,7 +66,7 @@ implementation
 uses
   Ntapi.nttmapi, NtUtils, NtUiLib.Exceptions, NtUtils.Transactions,
   NtUtils.Objects, NtUiLib.AccessMasks, DelphiUiLib.Strings, DelphiUtils.Arrays,
-  NtUiLib.Icons, ProcessTransact, NtUiLib.Exceptions.Dialog,
+  UI.ProcessIcons, ProcessTransact, NtUiLib.Exceptions.Dialog,
   TransactionInfo, ProcessInfo, NtUtils.Processes.Query, NtUtils.Files;
 
 {$R *.dfm}
@@ -128,7 +128,7 @@ begin
   begin
     Cell[1] := IntToStr(Item.UniqueProcessId);
     Cell[2] := IntToHexEx(Item.HandleValue);
-    Cell[3] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
+    Cell[3] := Item.GrantedAccess.Format<TTmTxAccessMask>;
 
     if not IsFirstUpdate then
       Color := clLime;
@@ -362,7 +362,7 @@ begin
         SetLength(Handles, 0);
 
       // Filter transactions only
-      TArrayHelper.Filter<TSystemHandleEntry>(Handles,
+      TArray.FilterInline<TSystemHandleEntry>(Handles,
         ByTypeIndex(TmTxTypeIndex));
 
       OnHandleSnapshotting.Invoke(Handles);

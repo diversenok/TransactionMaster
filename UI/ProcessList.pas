@@ -5,11 +5,11 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, VclEx.ListView,
-  Vcl.StdCtrls, System.ImageList, Vcl.ImgList, Vcl.ExtCtrls,
+  Vcl.StdCtrls, System.ImageList, Vcl.ImgList, Vcl.ExtCtrls, VclEx.Form,
   NtUtils.Processes.Snapshots, DelphiUtils.Arrays;
 
 type
-  TFormProcessList = class(TForm)
+  TFormProcessList = class(TFormEx)
     lvProcesses: TListViewEx;
     btnOk: TButton;
     SearchBox: TButtonedEdit;
@@ -34,7 +34,7 @@ type
 implementation
 
 uses
-  NtUiLib.Icons, NtUtils;
+  UI.ProcessIcons, NtUtils;
 
 {$R *.dfm}
 
@@ -74,7 +74,7 @@ begin
     if not NtxEnumerateProcesses(Entries).IsSuccess then
       Exit;
 
-    ProcessTree := TArrayHelper.BuildTree<TProcessEntry>(Entries,
+    ProcessTree := TArray.BuildTree<TProcessEntry>(Entries,
       ParentProcessChecker);
 
     // Add parentless processes and then all other recursively

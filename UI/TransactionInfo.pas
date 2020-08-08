@@ -7,10 +7,10 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls,
   Vcl.Menus, Vcl.ExtCtrls, Vcl.Graphics, VclEx.ListView, NtUtils.Objects,
   NtUtils.Objects.Snapshots, DelphiUiLib.HysteresisList, NtUtils,
-  NtUtils.Processes.Snapshots;
+  NtUtils.Processes.Snapshots, VclEx.Form;
 
 type
-  TFormTmTxInfo = class(TForm)
+  TFormTmTxInfo = class(TFormEx)
     btnClose: TButton;
     btnCommit: TButton;
     btnRollback: TButton;
@@ -55,7 +55,7 @@ implementation
 uses
   NtUtils.Transactions, Ntapi.nttmapi, NtUiLib.AccessMasks,
   DelphiUiLib.Strings, NtUiLib.Exceptions, NtUtils.Processes.Query,
-  NtUiLib.Icons, NtUtils.Processes, Ntapi.ntpsapi, NtUtils.Files,
+  UI.ProcessIcons, NtUtils.Processes, Ntapi.ntpsapi, NtUtils.Files,
   ProcessList, MainForm, ProcessInfo, System.UITypes;
 
 {$R *.dfm}
@@ -78,7 +78,7 @@ begin
   begin
     Cell[1] := IntToStr(Item.UniqueProcessId);
     Cell[2] := IntToHexEx(Item.HandleValue);
-    Cell[3] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
+    Cell[3] := Item.GrantedAccess.Format<TTmTxAccessMask>;
 
     if not IsFirstUpdate then
       Color := clLime;
@@ -304,9 +304,7 @@ var
 begin
   if NtxQueryBasicObject(hxTranscation.Handle, Info).IsSuccess then
   begin
-    lvInfo.Items[4].Cell[1] := FormatAccessPrefixed(Info.GrantedAccess,
-      @TmTxAccessType);
-
+    lvInfo.Items[4].Cell[1] := Info.GrantedAccess.Format<TTmTxAccessMask>(True);
     lvInfo.Items[5].Cell[1] := IntToStr(Info.PointerCount);
     lvInfo.Items[6].Cell[1] := IntToStr(Info.HandleCount);
   end;

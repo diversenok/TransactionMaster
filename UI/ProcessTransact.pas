@@ -4,11 +4,11 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, VclEx.Form,
   Vcl.ComCtrls, NtUtils.Objects, NtUtils;
 
 type
-  TFormTransact = class(TForm)
+  TFormTransact = class(TFormEx)
     btnBrowse: TButton;
     btnCancel: TButton;
     btnContinue: TButton;
@@ -44,9 +44,9 @@ implementation
 
 uses
   ProcessList, ProcessInfo, TmTxTrackerUtils, Winapi.ShlwApi, Winapi.WinNt,
-  Ntapi.ntstatus, NtUtils.Processes, NtUiLib.Icons, NtUtils.Transactions.Remote,
-  NtUtils.Exec, NtUtils.Exec.Win32, NtUtils.Transactions, NtUtils.Threads,
-  NtUiLib.Exceptions;
+  Ntapi.ntstatus, NtUtils.Processes, UI.ProcessIcons,
+  NtUtils.Transactions.Remote, NtUtils.Exec, NtUtils.Exec.Win32,
+  NtUtils.Transactions, NtUtils.Threads, NtUiLib.Exceptions;
 
 {$R *.dfm}
 

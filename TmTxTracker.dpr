@@ -4,17 +4,21 @@ library TmTxTracker;
 {$WEAKLINKRTTI ON}
 
 uses
-  Ntapi.ntdef in 'NtUtils\Headers\Ntapi.ntdef.pas',
-  Ntapi.ntexapi in 'NtUtils\Headers\Ntapi.ntexapi.pas',
-  Ntapi.ntkeapi in 'NtUtils\Headers\Ntapi.ntkeapi.pas',
-  Ntapi.ntmmapi in 'NtUtils\Headers\Ntapi.ntmmapi.pas',
-  Ntapi.ntpebteb in 'NtUtils\Headers\Ntapi.ntpebteb.pas',
-  Ntapi.ntrtl in 'NtUtils\Headers\Ntapi.ntrtl.pas',
-  Ntapi.ntstatus in 'NtUtils\Headers\Ntapi.ntstatus.pas',
-  Ntapi.nttmapi in 'NtUtils\Headers\Ntapi.nttmapi.pas',
-  Winapi.NtSecApi in 'NtUtils\Headers\Winapi.NtSecApi.pas',
-  Winapi.WinBase in 'NtUtils\Headers\Winapi.WinBase.pas',
-  Winapi.WinNt in 'NtUtils\Headers\Winapi.WinNt.pas';
+  DelphiApi.Reflection in 'NtUtilsUI\NtUtils\Headers\DelphiApi.Reflection.pas',
+  Ntapi.ntdef in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntdef.pas',
+  Ntapi.ntexapi in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntexapi.pas',
+  Ntapi.ntkeapi in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntkeapi.pas',
+  Ntapi.ntmmapi in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntmmapi.pas',
+  Ntapi.ntpebteb in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntpebteb.pas',
+  Ntapi.ntrtl in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntrtl.pas',
+  Ntapi.ntseapi in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntseapi.pas',
+  Ntapi.ntstatus in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntstatus.pas',
+  Ntapi.nttmapi in 'NtUtilsUI\NtUtils\Headers\Ntapi.nttmapi.pas',
+  NtUtils.Version in 'NtUtilsUI\NtUtils\Headers\NtUtils.Version.pas',
+  Winapi.NtSecApi in 'NtUtilsUI\NtUtils\Headers\Winapi.NtSecApi.pas',
+  Winapi.WinBase in 'NtUtilsUI\NtUtils\Headers\Winapi.WinBase.pas',
+  Winapi.WinNt in 'NtUtilsUI\NtUtils\Headers\Winapi.WinNt.pas',
+  NtUtils.SysUtils in 'NtUtilsUI\NtUtils\NtUtils.SysUtils.pas';
 
 var
   FutureTransaction: THandle;
@@ -22,8 +26,7 @@ var
 {$IFDEF Debug}
 function ReportState(Reason: Integer): NTSTATUS;
 var
-  TidStr: UNICODE_STRING;
-  Buffer: array [0..10] of WideChar;
+  TidStr: String;
 begin
   Result := STATUS_SUCCESS;
 
@@ -36,22 +39,16 @@ begin
 
     DLL_THREAD_ATTACH, DLL_THREAD_DETACH:
       begin
-        TidStr.Length := 0;
-        TidStr.MaximumLength := SizeOf(Buffer);
-        TidStr.Buffer := PWideChar(@Buffer);
-        FillChar(Buffer, SizeOf(Buffer), 0);
-
-        Result := RtlIntegerToUnicodeString(Cardinal(
-          NtCurrentTeb.ClientId.UniqueThread), 10, TidStr);
+        TidStr := RtlxIntToStr(NtCurrentTeb.ClientId.UniqueThread);
 
         case Reason of
           DLL_THREAD_ATTACH:
             OutputDebugStringW(PWideChar('TmTxTracker: attached to thread ' +
-              TidStr.ToString));
+              TidStr));
 
           DLL_THREAD_DETACH:
             OutputDebugStringW(PWideChar('TmTxTracker: detached from thread ' +
-              TidStr.ToString));
+              TidStr));
         end;
       end;
   end;

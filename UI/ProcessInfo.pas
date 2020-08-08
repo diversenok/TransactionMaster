@@ -7,10 +7,10 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   Vcl.ComCtrls, VclEx.ListView, Vcl.Menus, DelphiUiLib.HysteresisList,
   NtUtils.Objects.Snapshots, NtUtils.Objects, NtUtils.Processes.Snapshots,
-  NtUtils, TmTxTrackerUtils;
+  NtUtils, TmTxTrackerUtils, VclEx.Form;
 
 type
-  TFormProcessInfo = class(TForm)
+  TFormProcessInfo = class(TFormEx)
     btnClose: TButton;
     btnSetFuture: TButton;
     cbFutureTmTx: TComboBox;
@@ -77,7 +77,7 @@ uses
   NtUiLib.AccessMasks, NtUtils.Processes, NtUtils.Threads, NtUtils.Transactions,
   NtUtils.Transactions.Remote, NtUtils.WinUser, DelphiUiLib.Strings,
   DelphiUtils.Arrays, NtUiLib.Exceptions.Report, System.UITypes,
-  NtUiLib.Icons, ProcessList, Winapi.WinNt, NtUiLib.Exceptions;
+  UI.ProcessIcons, ProcessList, Winapi.WinNt, NtUiLib.Exceptions;
 
 {$R *.dfm}
 
@@ -98,7 +98,7 @@ var
 begin
   // We are interested only in one process
   FilteredHandles := Copy(Handles, Low(Handles), Length(Handles));
-  TArrayHelper.Filter<TSystemHandleEntry>(FilteredHandles, ByProcess(PID));
+  TArray.FilterInline<TSystemHandleEntry>(FilteredHandles, ByProcess(PID));
 
   lvHandles.Items.BeginUpdate;
   begin
@@ -246,7 +246,7 @@ begin
   with lvHandles.Items.Add do
   begin
     Cell[0] := IntToHexEx(Item.HandleValue);
-    Cell[1] := FormatAccess(Item.GrantedAccess, @TmTxAccessType);
+    Cell[1] := Item.GrantedAccess.Format<TTmTxAccessMask>;
     Cell[2] := 'Unknown';
 
     // Add corresponging sub-menu
