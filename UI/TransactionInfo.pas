@@ -53,10 +53,11 @@ type
 implementation
 
 uses
-  NtUtils.Transactions, Ntapi.nttmapi, NtUiLib.AccessMasks,
+  NtUtils.Transactions, Ntapi.nttmapi, NtUiLib.Reflection.AccessMasks,
   DelphiUiLib.Strings, NtUiLib.Exceptions, NtUtils.Processes.Query,
   UI.ProcessIcons, NtUtils.Processes, Ntapi.ntpsapi, NtUtils.Files,
-  ProcessList, MainForm, ProcessInfo, System.UITypes;
+  ProcessList, MainForm, ProcessInfo, System.UITypes,
+  DelphiUiLib.Reflection.Strings;
 
 {$R *.dfm}
 

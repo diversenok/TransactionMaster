@@ -74,10 +74,11 @@ implementation
 
 uses
   MainForm, TransactionInfo, Ntapi.nttmapi, Ntapi.ntpsapi, Ntapi.ntkeapi,
-  NtUiLib.AccessMasks, NtUtils.Processes, NtUtils.Threads, NtUtils.Transactions,
-  NtUtils.Transactions.Remote, NtUtils.WinUser, DelphiUiLib.Strings,
-  DelphiUtils.Arrays, NtUiLib.Exceptions.Report, System.UITypes,
-  UI.ProcessIcons, ProcessList, Winapi.WinNt, NtUiLib.Exceptions;
+  NtUiLib.Reflection.AccessMasks, NtUtils.Processes, NtUtils.Threads,
+  NtUtils.Transactions, NtUtils.Transactions.Remote, NtUtils.WinUser,
+  DelphiUiLib.Strings, DelphiUtils.Arrays, NtUiLib.Reflection.Exceptions,
+  System.UITypes, UI.ProcessIcons, ProcessList, Winapi.WinNt,
+  NtUiLib.Exceptions;
 
 {$R *.dfm}
 
@@ -160,7 +161,7 @@ begin
      if (Threads[i].State = hisExisting) or (IsFirstUpdate and
       (Threads[i].State = hisNew)) then
      begin
-       if Threads[i].Data.Basic.WaitReason = Suspended then
+       if Threads[i].Data.Basic.WaitReason = KWaitReason.Suspended then
          lvThreads.Items[i].Color := $AAAAAA // Suspended threads are gray
        else if UsrxIsGuiThread(Threads[i].Data.Basic.ClientId.UniqueThread) then
          lvThreads.Items[i].Color := $77FFFF // GUI threads are yellow

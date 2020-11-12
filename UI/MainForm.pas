@@ -65,9 +65,10 @@ implementation
 
 uses
   Ntapi.nttmapi, NtUtils, NtUiLib.Exceptions, NtUtils.Transactions,
-  NtUtils.Objects, NtUiLib.AccessMasks, DelphiUiLib.Strings, DelphiUtils.Arrays,
+  NtUtils.Objects, NtUiLib.Reflection.AccessMasks, DelphiUiLib.Strings,
   UI.ProcessIcons, ProcessTransact, NtUiLib.Exceptions.Dialog,
-  TransactionInfo, ProcessInfo, NtUtils.Processes.Query, NtUtils.Files;
+  TransactionInfo, ProcessInfo, NtUtils.Processes.Query, NtUtils.Files,
+  DelphiUtils.Arrays;
 
 {$R *.dfm}
 

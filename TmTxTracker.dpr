@@ -7,6 +7,7 @@ uses
   DelphiApi.Reflection in 'NtUtilsUI\NtUtils\Headers\DelphiApi.Reflection.pas',
   Ntapi.ntdef in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntdef.pas',
   Ntapi.ntexapi in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntexapi.pas',
+  Ntapi.ntioapi in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntioapi.pas',
   Ntapi.ntkeapi in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntkeapi.pas',
   Ntapi.ntmmapi in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntmmapi.pas',
   Ntapi.ntpebteb in 'NtUtilsUI\NtUtils\Headers\Ntapi.ntpebteb.pas',

@@ -44,9 +44,9 @@ implementation
 
 uses
   ProcessList, ProcessInfo, TmTxTrackerUtils, Winapi.ShlwApi, Winapi.WinNt,
-  Ntapi.ntstatus, NtUtils.Processes, UI.ProcessIcons,
-  NtUtils.Transactions.Remote, NtUtils.Exec, NtUtils.Exec.Win32,
-  NtUtils.Transactions, NtUtils.Threads, NtUiLib.Exceptions;
+  Ntapi.ntstatus, NtUtils.Processes, UI.ProcessIcons, NtUtils.Threads,
+  NtUtils.Transactions.Remote, NtUtils.Transactions, NtUiLib.Exceptions,
+  NtUtils.Processes.Create, NtUtils.Processes.Create.Win32;
 
 {$R *.dfm}
 
@@ -102,16 +102,15 @@ end;
 function TFormTransact.CreateSuspendedProcess(out hxProcess: IHandle;
   out hxThread: IHandle): TNtxStatus;
 var
+  Options: TCreateProcessOptions;
   ProcessInfo: TProcessInfo;
-  ParamProvider: TDefaultExecProvider;
 begin
-  ParamProvider := TDefaultExecProvider.Create;
-  ParamProvider.UseParams := [ppParameters, ppCreateSuspended];
-  ParamProvider.strApplication := tbExecutable.Text;
-  ParamProvider.strParameters := tbParameters.Text;
-  ParamProvider.bCreateSuspended := True;
+  Options := Default(TCreateProcessOptions);
+  Options.Application := tbExecutable.Text;
+  Options.Parameters := tbParameters.Text;
+  Options.Flags := PROCESS_OPTION_SUSPENDED;
 
-  Result := TExecCreateProcessAsUser.Execute(ParamProvider, ProcessInfo);
+  Result := AdvxCreateProcess(Options, ProcessInfo);
 
   if Result.IsSuccess then
   begin

@@ -114,6 +114,7 @@
         <DCCReference Include="NtUtilsUI\NtUtils\Headers\DelphiApi.Reflection.pas"/>
         <DCCReference Include="NtUtilsUI\NtUtils\Headers\Ntapi.ntdef.pas"/>
         <DCCReference Include="NtUtilsUI\NtUtils\Headers\Ntapi.ntexapi.pas"/>
+        <DCCReference Include="NtUtilsUI\NtUtils\Headers\Ntapi.ntioapi.pas"/>
         <DCCReference Include="NtUtilsUI\NtUtils\Headers\Ntapi.ntkeapi.pas"/>
         <DCCReference Include="NtUtilsUI\NtUtils\Headers\Ntapi.ntmmapi.pas"/>
         <DCCReference Include="NtUtilsUI\NtUtils\Headers\Ntapi.ntpebteb.pas"/>
